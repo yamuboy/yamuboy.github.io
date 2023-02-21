@@ -1,0 +1,165 @@
+/*
+      Thermal Branch Model
+      Version 1.5
+      (C) August 2012  Anthony Parker   Macquarie University
+*/
+
+`include "disciplines.h"
+`include "constants.h"
+
+// /////////////////////////////////////////////////////////////////////// ///////////////////////////////////////////////////////////////////////
+
+`define NODES 10 // number of intermediate nodes supported by this element. Limited by compiler
+
+module MQ_THBR22( Tjunctn, Ambient );
+    inout          Tjunctn, Ambient  ;
+    thermal        Tjunctn, Node_02, Node_03, Node_04, Node_05, Node_06, Node_07, Node_08, Node_09, Node_10, Ambient  ;
+    real gTj_02, g02_03, g03_04, g04_05, g05_06, g06_07, g07_08, g08_09, g09_10, g10_Ta;
+    real heatTj, heat02, heat03, heat04, heat05, heat06, heat07, heat08, heat09, heat10;
+    real condTj_02, cond02_03, cond03_04, cond04_05, cond05_06, cond06_07, cond07_08, cond08_09, cond09_10, cond10_Ta;
+    real capacityTj, capacity02, capacity03, capacity04, capacity05, capacity06, capacity07, capacity08, capacity09, capacity10;
+
+    (* desc = "Total number of active nodes in a series connected sequence of identical blocks." *)
+    parameter integer TOTAL_NODES = 8 from [0:inf);
+
+    (* desc = "Sequence number of this block in a series of blocks." *)
+    parameter integer SEQUENCE_NO = 0 from [0:TOTAL_NODES/10.0];
+
+    (* desc = "Low characteristic frequency of thermal response" *)
+    parameter real FT = 1000.0 from (0:inf);
+
+    (* desc = "High characteristic frequency of thermal response\nSets the highest frequency response (within the chanel) relative to the characteristic frequency." *)
+    parameter real FO = 1e12 from (FT:inf);
+
+    (* desc = "Order of thermal response\nIs 0.5 for an isotropic heat source in homogeneous medium. Typically 0.2 to 0.4 in a FET." *)
+    parameter real N = 0.3 from (0.0:0.9);
+
+    (* desc = "Thermal resistance\nAbsolute K/W implemented in ohms" *)
+    parameter real R = 1.0 from (0.001:inf);
+
+    (* desc = "Area Factor\nNumber of parallel instances" *)
+    parameter real AFAC	 = 1.0;
+
+   analog
+      begin
+         @(initial_step)
+            begin
+               integer  Last_Capacity_Node, start_node;
+               real  r_o, g_ratio, c_ratio, decades, thermal_resistance;
+
+//             This element provides `NODES out of TOTAL_NODES in the thermal path composed of a series connect sequence
+//             of instances of this element. The start_node is the position that Node 1 (Tj or Tjunctn) of this element
+//             occupies in the TOTAL_NODES sequence. The Last_Capacity_Node is the relative position of the last node
+//             relative to Node 1 of this element. If Last_Capacity_Node is greater than `NODES, then the last node must
+//             be in a subsequent instance of this element is the thermal path sequence.
+
+               start_node = SEQUENCE_NO * `NODES;
+               Last_Capacity_Node = TOTAL_NODES - start_node + 1;
+
+               thermal_resistance =  R / AFAC;
+               decades = log(FO/FT); // log base 10
+               g_ratio  =  pow((1.0 - N)/(1.0 + N), decades/(1.0+TOTAL_NODES));
+               r_o  = thermal_resistance  * (1.0 - g_ratio) / (pow(g_ratio,-TOTAL_NODES) - g_ratio);
+
+               condTj_02 =  ( Last_Capacity_Node==1  ? `NODES       : 1.0) * pow(g_ratio, start_node) / r_o;
+               cond02_03 =  condTj_02 * ( Last_Capacity_Node==02  ?  9.0*g_ratio  :  ( Last_Capacity_Node>02 ? g_ratio : 1.0) );
+               cond03_04 =  cond02_03 * ( Last_Capacity_Node==03  ?  8.0*g_ratio  :  ( Last_Capacity_Node>03 ? g_ratio : 1.0) );
+               cond04_05 =  cond03_04 * ( Last_Capacity_Node==04  ?  7.0*g_ratio  :  ( Last_Capacity_Node>04 ? g_ratio : 1.0) );
+               cond05_06 =  cond04_05 * ( Last_Capacity_Node==05  ?  6.0*g_ratio  :  ( Last_Capacity_Node>05 ? g_ratio : 1.0) );
+               cond06_07 =  cond05_06 * ( Last_Capacity_Node==06  ?  5.0*g_ratio  :  ( Last_Capacity_Node>06 ? g_ratio : 1.0) );
+               cond07_08 =  cond06_07 * ( Last_Capacity_Node==07  ?  4.0*g_ratio  :  ( Last_Capacity_Node>07 ? g_ratio : 1.0) );
+               cond08_09 =  cond07_08 * ( Last_Capacity_Node==08  ?  3.0*g_ratio  :  ( Last_Capacity_Node>08 ? g_ratio : 1.0) );
+               cond09_10 =  cond08_09 * ( Last_Capacity_Node==09  ?  2.0*g_ratio  :  ( Last_Capacity_Node>09 ? g_ratio : 1.0) );
+               cond10_Ta =  cond09_10 * ( Last_Capacity_Node==10  ?  1.0*g_ratio  :  ( Last_Capacity_Node>10 ? g_ratio : 1.0) );
+
+               if(TOTAL_NODES > 0)
+                  c_ratio = g_ratio * pow((1.0 - r_o /(thermal_resistance * pow(g_ratio, TOTAL_NODES))) * decades * FT/FO, -1.0/TOTAL_NODES);
+               else
+                  c_ratio = 1.0;
+
+//             Set capacity of any nodes beyond the last to zero
+               capacityTj = pow(c_ratio, start_node) * (1.0 - N) / (`M_TWO_PI * FO * r_o );
+               capacity02 = Last_Capacity_Node > 01 ? capacityTj * c_ratio : 0.0;
+               capacity03 = Last_Capacity_Node > 02 ? capacity02 * c_ratio : 0.0;
+               capacity04 = Last_Capacity_Node > 03 ? capacity03 * c_ratio : 0.0;
+               capacity05 = Last_Capacity_Node > 04 ? capacity04 * c_ratio : 0.0;
+               capacity06 = Last_Capacity_Node > 05 ? capacity05 * c_ratio : 0.0;
+               capacity07 = Last_Capacity_Node > 06 ? capacity06 * c_ratio : 0.0;
+               capacity08 = Last_Capacity_Node > 07 ? capacity07 * c_ratio : 0.0;
+               capacity09 = Last_Capacity_Node > 08 ? capacity08 * c_ratio : 0.0;
+               capacity10 = Last_Capacity_Node > 09 ? capacity09 * c_ratio : 0.0;
+            end // initial
+
+            // Heat capacities added at all but the ambient node.
+            gTj_02 = Temp(Tjunctn,Node_02) * condTj_02;
+            g02_03 = Temp(Node_02,Node_03) * cond02_03;
+            g03_04 = Temp(Node_03,Node_04) * cond03_04;
+            g04_05 = Temp(Node_04,Node_05) * cond04_05;
+            g05_06 = Temp(Node_05,Node_06) * cond05_06;
+            g06_07 = Temp(Node_06,Node_07) * cond06_07;
+            g07_08 = Temp(Node_07,Node_08) * cond07_08;
+            g08_09 = Temp(Node_08,Node_09) * cond08_09;
+            g09_10 = Temp(Node_09,Node_10) * cond09_10;
+            g10_Ta = Temp(Node_10,Ambient) * cond10_Ta;
+
+            Pwr(Tjunctn,Node_02) <+ gTj_02;
+            Pwr(Node_02,Node_03) <+ g02_03;
+            Pwr(Node_03,Node_04) <+ g03_04;
+            Pwr(Node_04,Node_05) <+ g04_05;
+            Pwr(Node_05,Node_06) <+ g05_06;
+            Pwr(Node_06,Node_07) <+ g06_07;
+            Pwr(Node_07,Node_08) <+ g07_08;
+            Pwr(Node_08,Node_09) <+ g08_09;
+            Pwr(Node_09,Node_10) <+ g09_10;
+            Pwr(Node_10,Ambient) <+ g10_Ta;
+
+            // Heat capacities added at all but the Ambient node.
+            heatTj = capacityTj * Temp(Tjunctn);
+            heat02 = capacity02 * Temp(Node_02);
+            heat03 = capacity03 * Temp(Node_03);
+            heat04 = capacity04 * Temp(Node_04);
+            heat05 = capacity05 * Temp(Node_05);
+            heat06 = capacity06 * Temp(Node_06);
+            heat07 = capacity07 * Temp(Node_07);
+            heat08 = capacity08 * Temp(Node_08);
+            heat09 = capacity09 * Temp(Node_09);
+            heat10 = capacity10 * Temp(Node_10);
+
+            Pwr(Tjunctn) <+ ddt(heatTj);
+            Pwr(Node_02) <+ ddt(heat02);
+            Pwr(Node_03) <+ ddt(heat03);
+            Pwr(Node_04) <+ ddt(heat04);
+            Pwr(Node_05) <+ ddt(heat05);
+            Pwr(Node_06) <+ ddt(heat06);
+            Pwr(Node_07) <+ ddt(heat07);
+            Pwr(Node_08) <+ ddt(heat08);
+            Pwr(Node_09) <+ ddt(heat09);
+            Pwr(Node_10) <+ ddt(heat10);
+      end // analog
+endmodule
+
+
+//  NAME	MQ_THBR22
+//  HIDENAME	0
+//  ALLOWDUPLICATES	0
+//  CLASS	ThermalBranch
+//  CAT	"user\lumped"
+//  DESC	"Thermal branch from source (junction) to sink (ambient)"
+//  HELP	"DEFAULT"
+//  CONTEXT	0
+//  SYMBOL	"ThermalBranch@macuni.syf"
+//  FILE	"MQ_ThermalBranch22.cpp"
+//  VAIMPORT	"MQ_ThermalBranch22.va"	"MQ_THBR22"	1311	""	
+//  AUTHOR	"Anthony Parker, Macquarie University"
+//  VERSION	22
+
+//  PARAM_BEGIN
+//  ID	"MQ_THBR"	"Element ID"	4	16	4	0	0	""	""	""
+//  TOTAL_NODES	"8"	"Total number of active nodes in a series connected sequence of identical blocks."	2	15	6	2048	0	""	"[0..inf)error"	""
+//  SEQUENCE_NO	"0"	"Sequence number of this block in a series of blocks."	2	15	6	2048	0	""	"[0..TOTAL_NODES/10]error"	""
+//  FT	"1000"	"Low characteristic frequency of thermal response"	0	0	6	2048	0	""	"(0..inf)error"	""
+//  FO	"1.0e+12"	"High characteristic frequency of thermal response\nSets the highest frequency response (within the chanel) relative to the characteristic frequency."	0	0	6	2048	0	""	"(FT..inf)error"	""
+//  N	"0.3"	"Order of thermal response\nIs 0.5 for an isotropic heat source in homogeneous medium. Typically 0.2 to 0.4 in a FET."	0	15	6	2048	0	""	"(0.0..0.9)error"	""
+//  R	"1"	"Thermal resistance\nAbsolute K/W implemented in ohms"	0	15	6	2048	0	""	"(0.001..inf)error"	""
+//  AFAC	"1"	"Area Factor\nNumber of parallel instances"	0	15	6	2048	0	""	""	""
+//  PARAM_END

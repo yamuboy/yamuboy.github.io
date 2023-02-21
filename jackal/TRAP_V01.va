@@ -1,0 +1,126 @@
+/*
+      Composite trap model for the Jackal FET
+      Version 0.1
+*/
+
+`include "disciplines.h"
+`include "constants.h"
+
+`define   GMIN      1.0e-12
+`define   CTOK      273.15
+`define   MAX_EXP   60.0
+
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+module TRAP_V01 ( vc1, vc2, Tj, itrap );
+    inout         vc1, vc2, Tj, itrap ;
+    electrical    vc1, vc2,     itrap, n1, n2, n3 ;
+    thermal                 Tj         ;
+    
+    (* desc = "direct magnitude", units = "" *)
+    parameter real A = 0.03 from (-inf:inf);
+    
+    (* desc = "emission time", units = "" *)
+    parameter real ET = 0.1e-3 from [1.0e-12:inf);
+    
+    (* desc = "capture time", units = "" *)
+    parameter real CT = 0.2e-6 from [1.0e-12:inf);
+	    
+    (* desc = "transistion region smoothing paramter", units = "" *)
+    parameter real ALPHA = 0.0 from [0:inf);
+	
+    (* desc = "erf term magnitude", units = "" *)
+    parameter real E = 0.0 from (-inf:inf);
+	
+    (* desc = "erf term argument multipying factor", units = "" *)
+    parameter real E_FACT = 0.1 from (-inf:inf);
+	
+    (* desc = "erf term argument offset factor", units = "" *)
+    parameter real E_OFFS = 0.0 from (-inf:inf);
+	
+    (* desc = "activation energy for emission", units = "" *)
+    parameter real EA_EMI = 0.5 from [0:inf);
+    
+    (* desc = "activation energy for capture", units = "" *)
+    parameter real EA_CAP = 0.5 from [0:inf);
+	
+    (* desc = "nominal temperature, degrees C", units = "" *)
+    parameter real TNOM = 25.0 from [-273.15:inf);
+
+    (* desc = "linear temperature coefficient for trap magnitude", units = "" *)
+    parameter real T_MAG = 0.0 from (-inf:inf);
+
+	analog function real exp1;
+		input x;
+		real x;
+		begin
+			if (x > `MAX_EXP)
+				exp1 = exp(`MAX_EXP)*(1.0 + (x-`MAX_EXP) + 0.5*(x-`MAX_EXP)*(x-`MAX_EXP));
+			else
+				exp1 = exp(x);	
+		end
+	endfunction
+	
+    analog function real vtrap_function;
+        // compute the trap voltage stimulus smoothing function
+        input v1, v2, alpha;
+        real  v1, v2, alpha;
+        // local vars
+        begin
+            vtrap_function = 0.5*((v1-v2) + sqrt((v1-v2)*(v1-v2)+alpha));
+        end
+    endfunction //vtrap_function
+    
+`include "erf.h"
+    
+    /*****************************************************************************/
+    /*****************************************************************************/
+
+    analog begin : main
+        real cap, invk, t0;
+        real tjunc, tkelvin, tfact;
+		real tf_emission, tf_capture, g_capture, g_emission;
+        real m, m_scaled, vcontrol;
+
+        /////////////////////////////////////////////////////////////////////////
+        @(initial_step) begin : atstart
+            // compute constants
+            cap = 1.0e-9;
+            invk = 1.0 / 8.617332478e-5;
+			t0 = `CTOK;
+        end
+        /////////////////////////////////////////////////////////////////////////
+        
+        tjunc = Temp(Tj);
+        tkelvin = tjunc + t0;
+		tfact = 1.0/tkelvin - 1.0/t0;
+        
+        tf_emission = exp1(EA_EMI*tfact*invk);
+		tf_capture = exp1(EA_CAP*tfact*invk);
+		
+		g_capture = cap/(CT*tf_capture);
+		g_emission = cap/(ET*tf_emission);
+		
+		vcontrol = V(vc1,vc2);
+		m = A + E*0.5*(1.0+erf(E_FACT*(vcontrol-E_OFFS)));
+		m_scaled = m + T_MAG*(tjunc - TNOM);
+		
+		// trap filter components implemented in a stretched-exponential-like manner 
+        I(n1)     <+ vtrap_function(V(n1)-vcontrol,0.0,ALPHA)*g_capture + -vtrap_function(vcontrol-V(n1),0.0,ALPHA)*g_emission + cap*ddt(V(n1));
+        I(n2)     <+ vtrap_function(V(n2)-vcontrol,0.0,ALPHA)*g_capture + -vtrap_function(vcontrol-V(n2),0.0,ALPHA)*g_emission*0.4 + cap*ddt(V(n2));
+        I(n3)     <+ vtrap_function(V(n3)-vcontrol,0.0,ALPHA)*g_capture + -vtrap_function(vcontrol-V(n3),0.0,ALPHA)*g_emission*0.16 + cap*ddt(V(n3));
+				
+		// compute total trap output voltage (returned as a current)
+        I(itrap)  <+ m_scaled*(0.625*(vcontrol-V(n1)) + 0.25*(vcontrol-V(n2)) + 0.125*(vcontrol-V(n3)));
+
+    end
+    
+endmodule
+
+
+
+
+
+
+

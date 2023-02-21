@@ -1,0 +1,163 @@
+/*
+ *   Composite trap model for the Jackal FET
+ *   Version 0.5
+ *	  
+ *	   This version is a re-do of version 0.3 to fix convergence
+ *	   and add a trap offset voltage
+ */
+
+`include "disciplines.h"
+`include "constants.h"
+
+`define   GMIN      1.0e-12
+`define   CTOK      273.15
+`define   MAX_EXP   60.0
+
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+module TRAP_V05 ( vc1, vc2, Tj, itrap );
+    inout         vc1, vc2, Tj, itrap ;
+    electrical    vc1, vc2,     itrap, n1, n2, n3;
+    thermal                 Tj         ;
+    
+    (* desc = "direct magnitude", units = "" *)
+    parameter real A = 0.03 from (-inf:inf);
+    
+    (* desc = "emission time", units = "" *)
+    parameter real ET = 2.0e-6 from [1.0e-15:inf);
+    
+    (* desc = "capture time", units = "" *)
+    parameter real CT = 1.0e-7 from [1.0e-15:inf);
+	
+    (* desc = "transistion region offset voltage", units = "" *)
+    parameter real OFFSET = 0.0 from (-inf:inf);
+	
+    (* desc = "transistion region smoothing factor", units = "" *)
+    parameter real ALPHA = 0.0 from [0:inf);
+	
+    (* desc = "erf term magnitude", units = "" *)
+    parameter real E = 0.0 from (-inf:inf);
+	
+    (* desc = "erf term argument multipying factor", units = "" *)
+    parameter real E_FACT = 0.1 from (-inf:inf);
+	
+    (* desc = "erf term argument offset factor", units = "" *)
+    parameter real E_OFFS = 0.0 from (-inf:inf);
+	
+    (* desc = "activation energy for emission", units = "" *)
+    parameter real EA_EMI = 0.5 from [0:inf);
+    
+    (* desc = "activation energy for capture", units = "" *)
+    parameter real EA_CAP = 0.5 from [0:inf);
+	
+    (* desc = "linear temperature coefficient for trap magnitude", units = "" *)
+    parameter real T_FACT = 0.0 from (-inf:inf);
+
+    (* desc = "minimum temperature in Kelvin for the linear temperature coefficient", units = "" *)
+    parameter real T_MIN_K = 10.0 from [0:inf);
+	
+    (* desc = "maximum temperature in Kelvin for the linear temperature coefficient", units = "" *)
+    parameter real T_MAX_K = 500.0 from [0:inf);
+
+    (* desc = "linear temperature coefficient smoothing factor", units = "" *)
+    parameter real T_ALPHA = 0.0 from [0:inf);
+	
+	analog function real exp1;
+		// a limiting exponential that is continuous through the
+		// second derivative
+		input x;
+		real x;
+		begin
+			if (x > `MAX_EXP)
+				exp1 = exp(`MAX_EXP)*(1.0 + (x-`MAX_EXP) + 0.5*(x-`MAX_EXP)*(x-`MAX_EXP));
+			else
+				exp1 = exp(x);	
+		end
+	endfunction
+	
+    analog function real smooth_range_limit;
+        // compute a smoothing function with both
+		// an upper and lower limit
+        input v, v_min, v_max, alpha;
+        real  v, v_min, v_max, alpha;
+        // local vars
+        begin
+            smooth_range_limit = v + 0.5*(v_min-v+sqrt((v_min-v)*(v_min-v)+alpha)) - 0.5*(v-v_max+sqrt((v-v_max)*(v-v_max)+alpha));
+        end
+    endfunction //smooth_range_limit
+	
+    analog function real gg_func;
+        input v, g1, g2, of, al;
+        real  v, g1, g2, of, al;
+        real  alpha, sq_rt, sq_rt_v;
+        begin
+            alpha = al*al;
+            sq_rt = sqrt(of*of+alpha);
+            sq_rt_v = sqrt((v-of)*(v-of)+alpha);
+            gg_func = g1*v-g1*0.5*(v+sq_rt_v-sq_rt)+g2*0.5*(v+sq_rt_v-sq_rt);
+        end
+    endfunction //gg_func	
+	
+`include "erf.h"
+    
+    /*****************************************************************************/
+    /*****************************************************************************/
+
+    analog begin : main
+        real invk, t0, one_over_t0;
+        real tkelvin, tfact;
+        real tf_emission, tf_capture, g_capture, g_emission;
+        real m, vcontrol, conv_mult, inv_conv_mult, of, al;
+
+        /////////////////////////////////////////////////////////////////////////
+        @(initial_step) begin : atstart
+            // compute constants
+            invk = 1.0 / 8.617332478e-5;
+            t0 = `CTOK;
+			one_over_t0 = 1.0/t0;
+			
+			// set convergence multiplier
+			conv_mult = 1.0e-13;
+			inv_conv_mult = 1.0/conv_mult;
+			
+			// modify OFFSET and ALPHA by convergence multiplier
+			of = OFFSET*conv_mult;
+			al = ALPHA*conv_mult;
+        end
+        /////////////////////////////////////////////////////////////////////////
+        
+        // compute the temp in Kelvin and the activation energy temperature factor
+        tkelvin = smooth_range_limit(Temp(Tj)+t0,150.0,900.0,500.0);
+        tfact = 1.0/tkelvin - one_over_t0;
+        
+        // activivation energy modification of trap time constants
+        tf_emission = exp1(EA_EMI*tfact*invk);
+        tf_capture = exp1(EA_CAP*tfact*invk);
+
+        // trap emission and capture conductances
+        g_capture = 1.0/(CT*tf_capture);
+        g_emission = 1.0/(ET*tf_emission);
+		
+        // control terminal differential voltage
+		//  'conv_mult' multiplier for convergence
+        vcontrol = V(vc1,vc2)*conv_mult;
+		
+        // trap magnitude calculation, this is the combination of 3 terms
+        // - a constant multiplier (A)
+        // - a erf() control voltage multiplier (using E, E_FACT, and E_OFFS)
+        // - a linear temperature multiplier (using T_FACT, T_MIN_K, T_MAX_K, and T_ALPHA)
+        m = A + E*0.5*(1.0+erf(E_FACT*(V(vc1,vc2)-E_OFFS))) + T_FACT*(T_MAX_K - smooth_range_limit(tkelvin,T_MIN_K,T_MAX_K,T_ALPHA));		
+		
+        // trap emission and capture filter components implemented in a stretched-exponential manner
+        I(n1)     <+  ddt(V(n1)-vcontrol) + gg_func(V(n1),g_capture,g_emission,of,al);
+        I(n2)     <+  ddt(V(n2)-vcontrol) + gg_func(V(n2),g_capture,0.4*g_emission,of,al);
+        I(n3)     <+  ddt(V(n3)-vcontrol) + gg_func(V(n3),g_capture,0.16*g_emission,of,al);
+ 						
+        // total trap output voltage (returned as a current to make summation easier)
+		//  'conv_mult' divides the output to rescale it to the proper value
+        I(itrap)  <+ m*(0.625*V(n1) + 0.25*V(n2) + 0.125*V(n3))*inv_conv_mult;
+
+    end
+    
+endmodule

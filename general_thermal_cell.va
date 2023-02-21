@@ -1,0 +1,151 @@
+`include "constants.vams"
+`include "disciplines.vams"
+
+`define TK_MIN     0.15
+
+module general_thermal_cell(T1, T2);
+
+    inout T1, T2;
+    thermal T1, T2;
+    
+    //module parameters
+    (* desc = "X-dimension of cell", units="m" *)
+    parameter real X = 100e-6 from (0:inf);
+    
+    (* desc = "Y-dimension of cell", units="m" *)
+    parameter real Y = 100e-6 from (0:inf);
+    
+    (* desc = "Total cell thickness", units="m" *)
+    parameter real H0 = 100e-6 from (0:inf);
+    
+    (* desc = "Number of divisions", units="" *)
+    parameter integer N = 10 from [1:inf);
+    
+    (* desc = "Number of fingers", units="" *)
+    parameter integer NGF = 1 from [1:inf);
+    
+    (* desc = "Spreading factor", units="" *)
+    parameter real SF = 1.0 from [1:`M_PI];
+    
+    (* desc = "Thermal conductivity reference temperature", units="K" *)
+    parameter real K_T0 = `P_CELSIUS0 from [`TK_MIN:inf);
+    
+    (* desc = "Thermal conductivity @ T0", units="W/(m-K)" *)
+    parameter real K0 = 100.0 from (0:inf);
+    
+    (* desc = "Thermal conductivity exponential factor", units="" *)
+    parameter real K_ALPHA = 0.0 from (-inf:inf);
+    
+    (* desc = "Material density", units="kg/(m^3)" *)
+    parameter real RHO = 1.0 from (0:inf);
+    
+    (* desc = "Specific heat capacity constant", units="J/(kg-K)" *)
+    parameter real C0 = 1.0 from (-inf:inf);
+    
+    (* desc = "Specific heat capacity arctan coefficient", units="J/(kg-K)" *)
+    parameter real C1 = 0.0 from (-inf:inf);
+    
+    (* desc = "Specific heat capacity arctan argument coefficient", units="1/K" *)
+    parameter real C2 = 1.0 from (-inf:inf);
+    
+    (* desc = "Specific heat capacity arctan argument offset", units="K" *)
+    parameter real C3 = 0.0 from (-inf:inf);
+    
+    thermal [0:N-2] nodes;
+    
+    genvar i;
+
+    analog function real generate_sizes;
+        input H0, N, SF, X, n;
+        integer N, n, idx;
+        real H0, SF, X;
+        //real value;
+        begin
+            for(idx = 0; idx <= n; idx = idx + 1) begin
+                if(idx == 0)
+                    generate_sizes = X;
+                else
+                    generate_sizes = generate_sizes + 2.0*SF*H0*pow(2, idx - 1)/(pow(2,N) - 1);
+            end
+        end
+    endfunction
+    
+    //generate all N cells
+    generate
+        for (i = 0; i < N; i = i+1) begin
+            //calculate cell width/length and instantiate
+            //only one division
+            if(N == 1) begin
+                general_thermal_cell_inner #(   .X(X),
+                                                .Y(Y),
+                                                .Z(H0/(pow(2,N) - 1)),
+                                                .SF(SF),
+                                                .NGF(NGF),
+                                                .K_T0(K_T0),
+                                                .K0(K0),
+                                                .K_ALPHA(K_ALPHA),
+                                                .RHO(RHO),
+                                                .C0(C0),
+                                                .C1(C1),
+                                                .C2(C2),
+                                                .C3(C3)
+                                            ) T(T1, T2);
+            end
+            
+            //multiple divisions
+            else if(i == 0) begin
+                //instantiate first cell
+                general_thermal_cell_inner #(   .X(generate_sizes(H0, N, SF, X, i)),
+                                                .Y(generate_sizes(H0, N, SF, Y, i)),
+                                                .Z(H0*pow(2, i)/(pow(2,N) - 1)),
+                                                .SF(SF),
+                                                .NGF(NGF),
+                                                .K_T0(K_T0),
+                                                .K0(K0),
+                                                .K_ALPHA(K_ALPHA),
+                                                .RHO(RHO),
+                                                .C0(C0),
+                                                .C1(C1),
+                                                .C2(C2),
+                                                .C3(C3)
+                                            ) T(T1, nodes[i]);
+            end
+            else begin
+                //instantiate final cell
+                if(i == N - 1)
+                    general_thermal_cell_inner #(   .X(generate_sizes(H0, N, SF, X, i)),
+                                                    .Y(generate_sizes(H0, N, SF, Y, i)),
+                                                    .Z(H0*pow(2, i)/(pow(2,N) - 1)),
+                                                    .SF(SF),
+                                                    .NGF(NGF),
+                                                    .K_T0(K_T0),
+                                                    .K0(K0),
+                                                    .K_ALPHA(K_ALPHA),
+                                                    .RHO(RHO),
+                                                    .C0(C0),
+                                                    .C1(C1),
+                                                    .C2(C2),
+                                                    .C3(C3)
+                                                ) T(nodes[i - 1], T2);
+                //instantiate Nth cell
+                else
+                    general_thermal_cell_inner #(   .X(generate_sizes(H0, N, SF, X, i)),
+                                                    .Y(generate_sizes(H0, N, SF, Y, i)),
+                                                    .Z(H0*pow(2, i)/(pow(2,N) - 1)),
+                                                    .SF(SF),
+                                                    .NGF(NGF),
+                                                    .K_T0(K_T0),
+                                                    .K0(K0),
+                                                    .K_ALPHA(K_ALPHA),
+                                                    .RHO(RHO),
+                                                    .C0(C0),
+                                                    .C1(C1),
+                                                    .C2(C2),
+                                                    .C3(C3)
+                                                ) T(nodes[i - 1], nodes[i]);
+                            
+            end
+        end
+    endgenerate
+    
+endmodule

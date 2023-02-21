@@ -1,0 +1,72 @@
+/*
+      Source/Drain resistor model for the Jackal FET
+      Version 0.1
+*/
+
+`include "disciplines.h"
+`include "constants.h"
+
+`define   GMIN      1.0e-12
+
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+module SDRES_V01 ( vi, vo, Tr );
+    inout          vi, vo, Tr  ;
+    electrical     vi, vo      ;
+    thermal                Tr  ;
+
+    (* desc = "resistor periphery", units = "" *)
+    parameter real WID = 1.0 from [0.001:inf);
+    
+    (* desc = "resistor length", units = "" *)
+    parameter real LEN = 1.1 from [0.001:inf);
+
+    (* desc = "sheet resistivity", units = "" *)
+    parameter real RSHEET = 453.955 from [0:inf);
+    
+    (* desc = "contact resistance", units = "" *)
+    parameter real RCONTACT = 0.333795 from [0:inf);
+    
+    (* desc = "Nominal (extraction) temperature for temperature scale factors", units = "" *)
+    parameter real TNOM = 25.0 from (-273.15:1000.0];
+    
+    (* desc = "Temperature scale factor for RSHEET", units = "" *)
+    parameter real T_RS = 4.2746 from (-inf:inf) exclude 0.0;
+
+    (* desc = "Temperature scale factor for RCONT_MM", units = "" *)
+    parameter real T_RC = 4.238e-4 from (-inf:inf) exclude 0.0;
+    
+    /*****************************************************************************/
+    /*****************************************************************************/
+
+    analog begin : main
+    
+        real rfact, rcfact;
+        real tfactor, sheetr, contr;
+
+        /////////////////////////////////////////////////////////////////////////
+        @(initial_step) begin : atstart
+            // compute constants
+            rfact = LEN / WID;        
+            rcfact = 1000.0 / WID;        
+        end
+        /////////////////////////////////////////////////////////////////////////
+
+        tfactor = Temp(Tr) - TNOM;
+        sheetr = RSHEET + tfactor*T_RS;
+        contr = RCONTACT + tfactor*T_RC;
+                
+        I(vi,vo)  <+ V(vi,vo) / (sheetr*rfact + contr*rcfact);
+        Pwr(Tr)   <+ `GMIN*Temp(Tr);
+
+    end
+    
+endmodule
+
+
+
+
+
+
+

@@ -1,0 +1,198 @@
+/*
+      Charge Trap Centre Model
+      Version 2.2
+      Adds common node for control input
+      (C) August 2013  Anthony Parker
+*/
+
+`include "disciplines.h"
+`include "constants.h"
+
+`define   GMIN    1.0E-12  // $simparam("GMIN", 1.0E-12)
+
+`define   kKelvin 1000.0   // Scale temperature to 1 K / mV
+`define   QoverK  11604.505681420925
+
+// Global temperature mapping parameters. The value at the temperature node is mapped for numerical stability.
+`define   TEMPERATURE_UPPER_BOUND                2700.0     // greater than melting point
+`define   TEMP_UPPER_BOUND_RADIUS_SQR_times4   144400.0     // 4*190*190, maps T = 2700 --> 2510
+`define   TEMPERATURE_LOWER_BOUND_times2           70.0     // 35K - too cold for semiconductor action
+`define   TEMP_LOWER_BOUND_RADIUS_SQR_times16   55010.6955  // chosen to map T = 300 --> 300
+
+// Emission rate (frequency) limits for numerical stability.
+`define WMIN 1.591549430919e-6  // 0.01 mHz / 2PI
+`define WMAX 1.591549430919e18  // 1e7  THz / 2PI
+
+// /////////////////////////////////////////////////////////////////////// ///////////////////////////////////////////////////////////////////////
+
+module MQ_SRH22 ( trap_i, vc1, vc2, common, Tj);
+    inout         trap_i, vc1, vc2, common, Tj ;
+    electrical    trap_i, vc1, vc2, common,     trap_v;
+    thermal                                 Tj ;
+
+    (* desc = "Ionized Trap Potential\nPositive for electron trap, negative for a hole trap", units = "V" *)
+    parameter real VO = 0.1 from (-10:10);
+
+    (* desc = "Characteristic Emission Frequency at nominal temperature\nInverse of emission rate.", units = "Hz" *)
+    parameter real FO = 1000 from (0:inf);
+
+    (* desc = "Control Coefficient 1" *)
+    parameter real A = 0.1 from (-inf:inf);
+
+    (* desc = "Control Coefficient 2" *)
+    parameter real B = 0 from (-inf:inf);
+
+    (* desc = "Control Potential Offset" *)
+    parameter real C = 0 from (-inf:inf);
+
+    (* desc = "Trap Activation Energy\nApproximate depth of trap in the band gap (eV)", units = "V" *)
+    parameter real EG = 0.5 from (-5.0:5.0);
+
+    (* desc = "Extraction Temperature\nTemperature at which parameters supplied here were extracted.", units = "K" *)
+    parameter real TNOM = 300.0 from (70:inf);
+
+    (* desc = "Trap model capacitance\nSelect to maintain moderate currents for all anticipated operating conditions and frequencies.", units = "F" *)
+    parameter real CAP = 1.0e-7 from (0:inf);
+
+
+    analog function real Smooth_Max_times2;
+        // Returns twice (x bounded to lower limit).
+        // At (x = lower limit), the returned value is 2*(x + radius)
+        input x, lower_limit, radius_squared_times4;
+        real  x, lower_limit, radius_squared_times4;
+        real tmp;
+        begin
+            tmp = x - lower_limit;
+            Smooth_Max_times2 = x + lower_limit + sqrt(tmp * tmp + radius_squared_times4);
+        end
+    endfunction // Smooth_Min_times2
+
+    analog function real Smooth_Min_times2;
+        // Returns twice (x bounded to upper limit).
+        // At (x = upper limit), the returned value is 2*(x - radius)
+        input x, upper_limit, radius_squared_times4;
+        real  x, upper_limit, radius_squared_times4;
+        real tmp;
+        begin
+            tmp = x - upper_limit;
+            Smooth_Min_times2 = x + upper_limit - sqrt(tmp * tmp + radius_squared_times4);
+        end
+    endfunction // Smooth_Min_times2
+
+    analog function real TEXP;
+        // Bounded exponential expression.
+        // exp_M, exp_N are nominal and must be (0:inf)
+        // M is set to ln(exp_M) and N is set to ln(exp_N) outside this function to reduce computation effort
+        // The BiasFactor factor is qv/nkT
+        input BiasFactor, M, exp_M, N, exp_N;
+        real  BiasFactor, M, exp_M, N, exp_N;
+        begin
+            if (BiasFactor > M )
+                TEXP =   exp_M * (1.0 + BiasFactor - M);
+            else
+                if (BiasFactor > N)
+                    TEXP = exp(BiasFactor);
+                else
+                    TEXP = exp_N / (1.0 - BiasFactor + N);
+        end
+    endfunction //TEXP
+
+    // /////////////////////////////////////////////////////////////////////// ///////////////////////////////////////////////////////////////////////
+
+    analog begin
+        real Trap_Potential;
+        // variables
+        real bounded_T_times4, Tjunction_upper_bounded_times2;
+        real TNOMoverT, TNOMoverT_squared;
+        real BiasFactor, ActivationFactor;
+        real Charge_Current, Trap_Charge;
+
+        // Instance Parameters
+        real _BOUNDED_TNOM_times4;
+        real _CHAR_SCALE, _M, _EXP_M, _N, _EXP_N;
+        real _Inverse_Thermal_Potential, _ActivationFactor;
+
+        // /////////////////////////////////////////////////////////////////////// ///////////////////////////////////////////////////////////////////////
+        @(initial_step) begin
+            // local variables
+            real Inverse_Thermal_Potential;
+            real Tnom_upper_bounded_times2;
+            real omega_o;
+
+            // A bounding on Temperature is imposed for numerical stability. The same bound is applied to TNOM, so that
+            // the relationship between instance temperature and TNOM is maintained.
+            Tnom_upper_bounded_times2 = Smooth_Min_times2(TNOM, `TEMPERATURE_UPPER_BOUND, `TEMP_UPPER_BOUND_RADIUS_SQR_times4);
+            _BOUNDED_TNOM_times4 = Smooth_Max_times2(Tnom_upper_bounded_times2, `TEMPERATURE_LOWER_BOUND_times2, `TEMP_LOWER_BOUND_RADIUS_SQR_times16);
+
+            // /////////////////////////////////////////////////////////////////////// ///////////////////////////////////////////////////////////////////////
+
+            omega_o = `M_TWO_PI * FO;
+
+           // Instance Parameters
+
+            _Inverse_Thermal_Potential   = `QoverK / TNOM;
+            _ActivationFactor  =  -EG * _Inverse_Thermal_Potential;
+            _EXP_M  = `WMAX / omega_o;
+            _M = log(_EXP_M);
+            _EXP_N  = `WMIN / omega_o;
+            _N = log(_EXP_N);
+            _CHAR_SCALE = omega_o * CAP;
+
+        end //initialize
+
+        // /////////////////////////////////////////////////////////////////////// ///////////////////////////////////////////////////////////////////////
+
+        Trap_Potential   = V(trap_v);
+
+        // A bounding on Temperature is imposed for numerical stability.
+        Tjunction_upper_bounded_times2 = Smooth_Min_times2(Temp(Tj) * `kKelvin + `P_CELSIUS0 , `TEMPERATURE_UPPER_BOUND, `TEMP_UPPER_BOUND_RADIUS_SQR_times4);
+        bounded_T_times4 = Smooth_Max_times2(Tjunction_upper_bounded_times2, `TEMPERATURE_LOWER_BOUND_times2, `TEMP_LOWER_BOUND_RADIUS_SQR_times16);
+
+        TNOMoverT = _BOUNDED_TNOM_times4 / bounded_T_times4;
+        TNOMoverT_squared = TNOMoverT * TNOMoverT;
+
+        BiasFactor       = (A * V(vc1,common) + B * V(vc2,common) + C ) * _Inverse_Thermal_Potential * TNOMoverT;
+        ActivationFactor = _ActivationFactor * (TNOMoverT - 1.0);
+      
+        Charge_Current =  _CHAR_SCALE / TNOMoverT_squared  * ( Trap_Potential - VO / (1.0 + TEXP(BiasFactor, _M, _EXP_M, _N, _EXP_N)) )
+                          * ( TEXP(ActivationFactor, _M, _EXP_M, _N, _EXP_N) + TEXP(BiasFactor + ActivationFactor, _M, _EXP_M, _N, _EXP_N) );
+
+        Trap_Charge = CAP * Trap_Potential;
+
+        I(trap_v) <+ Charge_Current;
+        I(trap_v) <+ ddt(Trap_Charge);
+        
+        I(trap_i) <+ `GMIN * V(trap_i) - Trap_Potential;
+
+        I(vc1,common)  <+ `GMIN * V(vc1,common);
+        I(vc2,common)  <+ `GMIN * V(vc2,common);
+        Pwr(Tj)        <+ `GMIN * Temp(Tj);
+
+end
+endmodule
+
+
+//  NAME	MQ_SRH22
+//  HIDENAME	0
+//  ALLOWDUPLICATES	0
+//  CLASS	KMQ_SRH22
+//  CAT	"user\nonlinear"
+//  DESC	"Trap Centre model (Current source output)"
+//  HELP	"DEFAULT"
+//  CONTEXT	0
+//  SYMBOL	"TrapCentre22@macuni.syf"
+//  FILE	"MQ_TrapCentre22.cpp"
+//  AUTHOR	"Anthony Parker, Macquarie University"
+//  VERSION	22
+
+//  PARAM_BEGIN
+//  ID	"MQ_SRH"	"Element ID"	4	16	4	0	0	""	""	""
+//  VO	"0.1"	"Ionized Trap Potential\nPositive for electron trap, negative for a hole trap"	0	9	6	2048	0	""	"(-(10)..10)error"	""
+//  FO	"1000"	"Characteristic Emission Frequency at nominal temperature\nInverse of emission rate."	0	0	6	2048	0	""	"(0..inf)error"	""
+//  A	"0.1"	"Control Coefficient 1"	0	15	6	2048	0	""	""	""
+//  B	"0"  	"Control Coefficient 2"	0	15	6	2048	0	""	""	""
+//  C	"0"	    "Control Potential Offset"	0	15	6	2048	0	""	""	""
+//  EG	"0.5"	"Trap Activation Energy\nApproximate depth of trap in the band gap (eV)"	0	9	6	2048	0	""	"(-(5.000000e+000)..5.000000e+000)error"	""
+//  TNOM	"300"	"Extraction Temperature\nTemperature at which parameters supplied here were extracted."	0	6	6	2048	0	""	"(70..inf)error"	""
+//  CAP	"1.0e-7"	"Trap model capacitance\nSelect to maintain moderate currents for all anticipated operating conditions and frequencies."	0	1	6	2048	0	""	"(0..inf)error"	""
+//  PARAM_END

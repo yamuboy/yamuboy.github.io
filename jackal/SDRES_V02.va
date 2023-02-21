@@ -1,0 +1,71 @@
+/*
+      Source/Drain resistor model for the Jackal FET
+      Version 0.1
+*/
+
+`include "disciplines.h"
+`include "constants.h"
+
+`define   GMIN      1.0e-12
+
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+module SDRES_V02 ( vi, vo, Tr );
+    inout          vi, vo, Tr  ;
+    electrical     vi, vo      ;
+    thermal                Tr  ;
+
+    (* desc = "resistor periphery", units = "" *)
+    parameter real WID = 1.0 from [0.001:inf);
+    
+    (* desc = "resistor length", units = "" *)
+    parameter real LEN = 1.0 from [0.001:inf);
+
+    (* desc = "sheet resistivity min", units = "" *)
+    parameter real SRHO_MIN = 107.94 from [0:inf);
+    
+    (* desc = "sheet resistivity temperature slope", units = "" *)
+    parameter real SRHO_SLOPE = 5.6674 from [0:inf);
+    
+    (* desc = "sheet resistivity temperature offset", units = "" *)
+    parameter real SRHO_TOFFSET = 15.35 from [-273.15:inf);
+    
+    (* desc = "sheet resistivity temperature smoothing factor", units = "" *)
+    parameter real SRHO_ALPHA = 96.87 from [0:inf);
+    
+    (* desc = "contact resistance", units = "" *)
+    parameter real RCONTACT = 0.35 from [0:inf);
+    
+    (* desc = "Nominal (extraction) temperature for temperature scale factors", units = "" *)
+    parameter real TNOM = 25.0 from [-273.15:1000.0];
+
+    (* desc = "Temperature scale factor for RCONTACT", units = "" *)
+    parameter real T_RC = 0.0 from (-inf:inf);
+    
+    /*****************************************************************************/
+    /*****************************************************************************/
+
+    analog begin : main
+    
+        real rfact, rcfact;
+        real tfactor, sheetr, contr;
+
+        /////////////////////////////////////////////////////////////////////////
+        @(initial_step) begin : atstart
+            // compute constants
+            rfact = LEN / WID;        
+            rcfact = 1000.0 / WID;        
+        end
+        /////////////////////////////////////////////////////////////////////////
+
+        tfactor = Temp(Tr) - TNOM;
+        sheetr = SRHO_MIN + 0.5*SRHO_SLOPE*(Temp(Tr)-SRHO_TOFFSET + sqrt((Temp(Tr)-SRHO_TOFFSET)*(Temp(Tr)-SRHO_TOFFSET)+SRHO_ALPHA*SRHO_ALPHA));
+        contr = RCONTACT + tfactor*T_RC;
+                
+        I(vi,vo)  <+ V(vi,vo) / (sheetr*rfact + contr*rcfact);
+        Pwr(Tr)   <+ `GMIN*Temp(Tr);
+
+    end
+    
+endmodule

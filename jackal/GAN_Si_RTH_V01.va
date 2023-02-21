@@ -1,0 +1,327 @@
+`include "disciplines.vams"
+
+`define pi 3.14159265359
+`define T0 273.15
+
+module GAN_Si_RTH_V01(Tj, Ta);
+
+    inout   Tj, Ta;
+    thermal Tj, Ta;
+    thermal n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14;
+    
+    // module parameters (passed in from ADS/AWR)
+    (* desc = "Gate Length (µm)", units = "" *)
+    parameter real GL = 0.4;
+    (* desc = "Unit Gate Width (µm)", units = "" *)
+    parameter real UGW = 167;
+    (* desc = "Number of Gate Fingers", units = "" *)
+    parameter integer NGF = 6;
+    (* desc = "Gate-to-Gate Spacing (µm)", units = "" *)
+    parameter real G2G = 45;
+    (* desc = "Wafer Thickness (µm)", units = "" *)
+    parameter real H = 75;
+    (* desc = "Scaling factor (SF:1)", units = "" *)
+    parameter real SF = 1.0;
+    
+    // internal parameter instantiation
+    // compute limit for H1 such that H2 will never be less than H2_min
+    localparam real H0 = 1.6;
+    localparam real H2_min = 0.1;
+    localparam real H1_max = H - H0 - H2_min;
+    localparam real H1c = 0.5*(G2G-GL)/SF - H0;
+    localparam real H1 = H1c > H1_max ? H1_max : H1c; 
+    localparam real H2 = H-H0-H1;
+    
+    localparam real Vol_Au = (GL*0.1+(GL+0.6)*0.5)*UGW;
+    
+    localparam real Z0 = H0 * 1.0/15.0;
+    localparam real Z1 = H0 * 2.0/15.0;
+    localparam real Z2 = H0 * 4.0/15.0;
+    localparam real Z3 = H0 * 8.0/15.0;
+    
+    
+    localparam real X0 = GL;
+    localparam real X1 = X0 + 2.0*SF*Z0;
+    localparam real X2 = X1 + 2.0*SF*Z1;
+    localparam real X3 = X2 + 2.0*SF*Z2;
+    
+    
+    localparam real Y0 = UGW;
+    localparam real Y1 = Y0 + 2.0*SF*Z0;
+    localparam real Y2 = Y1 + 2.0*SF*Z1;
+    localparam real Y3 = Y2 + 2.0*SF*Z2;
+    
+    
+    localparam real T0 = H1 * 1.0/127.0;
+    localparam real T1 = H1 * 2.0/127.0;
+    localparam real T2 = H1 * 4.0/127.0;
+    localparam real T3 = H1 * 8.0/127.0;
+    localparam real T4 = H1 * 16.0/127.0;
+    localparam real T5 = H1 * 32.0/127.0;
+    localparam real T6 = H1 * 64.0/127.0;
+    localparam real T7 = H2 * 1.0/15.0;
+    localparam real T8 = H2 * 2.0/15.0;
+    localparam real T9 = H2 * 4.0/15.0;
+    localparam real T10 = H2 * 8.0/15.0;
+    
+    
+    localparam real GL0 = GL + 2.0*SF*H0;
+    localparam real GL1 = GL0 + 2.0*SF*T0;
+    localparam real GL2 = GL1 + 2.0*SF*T1;
+    localparam real GL3 = GL2 + 2.0*SF*T2;
+    localparam real GL4 = GL3 + 2.0*SF*T3;
+    localparam real GL5 = GL4 + 2.0*SF*T4;
+    localparam real GL6 = GL5 + 2.0*SF*T5;
+    
+    localparam real GL7 = G2G*NGF;
+    localparam real GL8 = GL7 + 2.0*SF*T7;
+    localparam real GL9 = GL8 + 2.0*SF*T8;
+    localparam real GL10 = GL9 + 2.0*SF*T9;
+    
+    
+    localparam real UGW0 = UGW + 2.0*SF*H0;
+    localparam real UGW1 = UGW0 + 2.0*SF*T0;
+    localparam real UGW2 = UGW1 + 2.0*SF*T1;
+    localparam real UGW3 = UGW2 + 2.0*SF*T2;
+    localparam real UGW4 = UGW3 + 2.0*SF*T3;
+    localparam real UGW5 = UGW4 + 2.0*SF*T4;
+    localparam real UGW6 = UGW5 + 2.0*SF*T5;
+    
+    localparam real UGW7 = UGW+G2G-GL;
+    localparam real UGW8 = UGW7 + 2.0*SF*T7;
+    localparam real UGW9 = UGW8 + 2.0*SF*T8;
+    localparam real UGW10 = UGW9 + 2.0*SF*T9;
+
+    // subnetwork instantiation
+    GaN_thermal_cell #(.SF(SF), .X(X0), .Y(Y0), .Z(Z0), .NGF(NGF)) R1(Tj, n1);
+    GaN_thermal_cell #(.SF(SF), .X(X1), .Y(Y1), .Z(Z1), .NGF(NGF)) R2(n1, n2);
+    GaN_thermal_cell #(.SF(SF), .X(X2), .Y(Y2), .Z(Z2), .NGF(NGF)) R3(n2, n3);
+    GaN_thermal_cell #(.SF(SF), .X(X3), .Y(Y3), .Z(Z3), .NGF(NGF)) R4(n3, n4);
+    
+    Si_thermal_cell #(.SF(SF), .X(GL0), .Y(UGW0), .Z(T0), .NGF(NGF)) R5(n4, n5);
+    Si_thermal_cell #(.SF(SF), .X(GL1), .Y(UGW1), .Z(T1), .NGF(NGF)) R6(n5, n6);
+    Si_thermal_cell #(.SF(SF), .X(GL2), .Y(UGW2), .Z(T2), .NGF(NGF)) R7(n6, n7);
+    Si_thermal_cell #(.SF(SF), .X(GL3), .Y(UGW3), .Z(T3), .NGF(NGF)) R8(n7, n8);
+    Si_thermal_cell #(.SF(SF), .X(GL4), .Y(UGW4), .Z(T4), .NGF(NGF)) R9(n8, n9);
+    Si_thermal_cell #(.SF(SF), .X(GL5), .Y(UGW5), .Z(T5), .NGF(NGF)) R10(n9, n10);
+    Si_thermal_cell #(.SF(SF), .X(GL6), .Y(UGW6), .Z(T6), .NGF(NGF)) R11(n10, n11);
+    
+    Si_thermal_cell #(.SF(SF), .X(GL7), .Y(UGW7), .Z(T7), .NGF(1)) R12(n11, n12);
+    Si_thermal_cell #(.SF(SF), .X(GL8), .Y(UGW8), .Z(T8), .NGF(1)) R13(n12, n13);
+    Si_thermal_cell #(.SF(SF), .X(GL9), .Y(UGW9), .Z(T9), .NGF(1)) R14(n13, n14);
+    Si_thermal_cell #(.SF(SF), .X(GL10), .Y(UGW10), .Z(T10), .NGF(1)) R15(n14, Ta);
+
+    Au_thermal_cell #(.X(Vol_Au), .Y(1), .Z(1), .NGF(NGF)) C1(Tj);
+    
+endmodule
+
+module GaN_thermal_cell(p1, p2);
+    `define p_GaN 6.15
+    `define TKMIN  0.1
+    `define TKMAX  1000.0
+    `define TKRADIUS_SQ  1.0
+    
+    inout   p1, p2;
+    thermal p1, p2;
+    parameter real X = 1;
+    parameter real Y = 1;
+    parameter real Z = 1;
+    parameter real SF = 1;
+    parameter integer NGF = 1;
+    
+    real Tk, Kth_GaN, Rth_GaN, Qth_GaN;
+
+    analog function real Qp_GaN;
+        input x;
+        real x;
+        begin
+            Qp_GaN = (74.424*x-0.00106*0.5*pow(x,2)-46720.0/x-2.0*685.9*sqrt(x))*1000.0/83.7297;
+        end
+    endfunction
+    
+    analog function real range_limit;
+        // limit the range of parameter v to within the range
+		// set by the lower and upper parameters, alpha creates
+		// a smoothing radius in the regions around the lower and
+		// upper boundaries
+        input v, lower, upper, alpha;
+        real  v, lower, upper, alpha;
+		real t;
+        begin
+			// lower side
+            t = 0.5*(lower + v + sqrt((v-lower)*(v-lower)+alpha));
+			// upper side
+			range_limit = 0.5*(upper + t - sqrt((t-upper)*(t-upper)+alpha));
+        end
+    endfunction //range_limit
+	
+    analog begin
+        //  this is unnecessary - no need to initialize dynamically calculated values
+        //  the @(initial_step) trigger is generally only needed in order to calculate
+        //  constants that are not going to change over the course of the simulation
+        //  such as variable values that are derived purely from model parameters
+        //  and are not based on dynamic circuit state -JB
+        //@(initial_step) begin
+        //    Tk = `T0;
+        //    Kth_GaN = 1.65*pow(((0+`T0)/300.0),-0.49);
+        //    Rth_GaN = 1e4*ln(Y*(X+2*SF*Z)/(X*(Y+2*SF*Z)))/(2*SF*Kth_GaN*(Y-X)*NGF);
+        //    Qth_GaN = NGF*1e-15*(X+SF*Z)*(Y+SF*Z)*Z*(Qp_GaN(`T0)-Qp_GaN(`T0))*`p_GaN;
+        //end
+        
+        // compute a value for Tk that is limited to a lower limit of TKMIN
+        // and an upper limit of TKMAX
+        Tk = range_limit(Temp(p1)+`T0,`TKMIN,`TKMAX,`TKRADIUS_SQ);
+        
+        Kth_GaN = 1.65*pow((Tk/300.0),-0.49);
+        Rth_GaN = 1e4*ln(Y*(X+2*SF*Z)/(X*(Y+2*SF*Z)))/(2*SF*Kth_GaN*(Y-X)*NGF);
+        Qth_GaN = NGF*1e-15*(X+SF*Z)*(Y+SF*Z)*Z*(Qp_GaN(Tk)-Qp_GaN(`T0))*`p_GaN;
+        
+        Pwr(p1, p2) <+ Temp(p1,p2)/Rth_GaN;
+        Pwr(p1) <+ ddt(Qth_GaN);
+        
+    end
+        
+endmodule
+
+module Si_thermal_cell(p1, p2);
+    `include "erf.h"
+    
+    `define p_Si 2.328
+    `define a1 51.367387203225
+    `define b1 0.0832939318588151
+    `define c1 1.32000566401351
+    `define d1 45.2556806834492
+    `define e1 0.440576879802623
+    `define f1 13.3709189415164
+    `define g1 51.2281098315128
+    `define h1 2.7
+    `define a2 3.81294e-3
+    `define b2 22.6908
+    `define c2 7.6908
+    `define d2 3.8e-3
+    `define e2 15.0
+    `define f2 5.4772256e-3
+    
+    `define TKMIN  0.1
+    `define TKMAX  1000.0
+    `define TKRADIUS_SQ  1.0
+    
+    inout   p1, p2;
+    thermal p1, p2;
+    parameter real X = 1;
+    parameter real Y = 1;
+    parameter real Z = 1;
+    parameter real SF = 1;
+    parameter integer NGF = 1;
+    
+    real Tk, Kth_Si, Rth_Si, Qth_Si;
+    real tktmp, tkll;
+
+    analog function real Qp_Si;
+        input x;
+        real x;
+        begin
+            Qp_Si = (0.5*`a2*pow(x,2)+`b2*x+`c2*exp(-`d2*x)/`d2-0.5*sqrt(`pi)*`e2*erf(`f2*x)/`f2)*1000.0/28.0855;
+        end
+    endfunction
+    
+    analog function real range_limit;
+        // limit the range of parameter v to within the range
+		// set by the lower and upper parameters, alpha creates
+		// a smoothing radius in the regions around the lower and
+		// upper boundaries
+        input v, lower, upper, alpha;
+        real  v, lower, upper, alpha;
+		real t;
+        begin
+			// lower side
+            t = 0.5*(lower + v + sqrt((v-lower)*(v-lower)+alpha));
+			// upper side
+			range_limit = 0.5*(upper + t - sqrt((t-upper)*(t-upper)+alpha));
+        end
+    endfunction //range_limit
+	
+    analog begin
+        //  see note above in the GaN_thermal_cell module -JB
+        //@(initial_step) begin
+        //    Tk = `T0;
+        //    Kth_Si = `a1*(1-exp(-1*pow((`b1*`T0),`h1)))-`g1*0.25*(1+erf(`c1*ln(`T0/`d1)))*(1+erf(`e1*ln(`T0/`f1)));
+        //    Rth_Si = 1e4*ln(Y*(X+2*SF*Z)/(X*(Y+2*SF*Z)))/(2*SF*Kth_Si*(Y-X)*NGF);
+        //    Qth_Si = NGF*1e-15*(X+SF*Z)*(Y+SF*Z)*Z*(Qp_Si(`T0)-Qp_Si(`T0))*`p_Si;
+        //end
+        
+        // compute a value for Tk that is limited to a lower limit of TKMIN
+        // and an upper limit of TKMAX
+        Tk = range_limit(Temp(p1)+`T0,`TKMIN,`TKMAX,`TKRADIUS_SQ);
+        
+        Kth_Si = `a1*(1-exp(-1*pow((`b1*Tk),`h1)))-`g1*0.25*(1+erf(`c1*ln(Tk/`d1)))*(1+erf(`e1*ln(Tk/`f1)));
+        Rth_Si = 1e4*ln(Y*(X+2*SF*Z)/(X*(Y+2*SF*Z)))/(2*SF*Kth_Si*(Y-X)*NGF);
+        Qth_Si = NGF*1e-15*(X+SF*Z)*(Y+SF*Z)*Z*(Qp_Si(Tk)-Qp_Si(`T0))*`p_Si;
+        
+        Pwr(p1, p2) <+ Temp(p1,p2)/Rth_Si;
+        Pwr(p1) <+ ddt(Qth_Si);
+    end
+        
+endmodule
+
+module Au_thermal_cell(p1);
+    `define TKMIN  0.1
+    `define TKMAX  1000.0
+    `define TKRADIUS_SQ  1.0
+    
+    inout   p1;
+    thermal p1;
+    parameter real X = 1;
+    parameter real Y = 1;
+    parameter real Z = 1;
+    parameter integer NGF = 1;
+    
+    real Tk, Qth_Au;
+    real tktmp, tkll;
+    
+    analog function real Qp_Au;
+        input x;
+        real x;
+        real a, b, c ,d;
+        begin
+            a = 0.2571887;
+            b = 53.4247444;
+            c = 38.6072802;
+            d = 24.8069859;
+            Qp_Au = ((2*d*x+a*(-2*b*x+pow(x,2)+b*sqrt(pow(b,2)+pow(c,2)-2*b*x+pow(x,2))-x*sqrt(pow(b,2)+pow(c,2)-2*b*x+pow(x,2)))-a*pow(c,2)*ln(-b+x+sqrt(pow(b,2)+pow(c,2)-2*b*x+pow(x,2))))/2)*1000.0/196.9665;
+        end
+    endfunction
+    
+    analog function real range_limit;
+        // limit the range of parameter v to within the range
+		// set by the lower and upper parameters, alpha creates
+		// a smoothing radius in the regions around the lower and
+		// upper boundaries
+        input v, lower, upper, alpha;
+        real  v, lower, upper, alpha;
+		real t;
+        begin
+			// lower side
+            t = 0.5*(lower + v + sqrt((v-lower)*(v-lower)+alpha));
+			// upper side
+			range_limit = 0.5*(upper + t - sqrt((t-upper)*(t-upper)+alpha));
+        end
+    endfunction //range_limit
+	
+    analog begin
+        //  see note above in the GaN_thermal_cell module -JB
+        //@(initial_step) begin
+        //    Tk = `T0;
+        //    Qth_Au = 1e-15*(Qp_Au(Tk)-Qp_Au(`T0))*19.32*X*Y*Z*NGF;
+        //end
+        
+        // compute a value for Tk that is limited to a lower limit of TKMIN
+        // and an upper limit of TKMAX
+        Tk = range_limit(Temp(p1)+`T0,`TKMIN,`TKMAX,`TKRADIUS_SQ);
+        
+        Qth_Au = 1e-15*(Qp_Au(Tk)-Qp_Au(`T0))*19.32*X*Y*Z*NGF;
+        
+        Pwr(p1) <+ ddt(Qth_Au);
+    end
+        
+endmodule

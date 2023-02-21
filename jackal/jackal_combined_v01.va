@@ -1,0 +1,513 @@
+/*
+      Jackal combined FET model
+      Version 0.1
+	  
+	  This version pulls the gate diodes and drain+source non-linear
+	  access resistors inside the core Jackal model.
+	  
+*/
+
+`include "disciplines.h"
+`include "constants.h"
+
+`define   GMIN       1.0e-12
+`define   SQRTPI     1.7724538509055160273
+`define   MAX_EXP    60.0
+`define   TJ_ALPHA   500.0
+`define   T0         273.15
+
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+module JACKALCOMBINED_V01 ( vg, vd, vs, trap, Tj, igen, vdi, vsi );
+    inout                   vg, vd, vs, trap, Tj, igen, vdi, vsi;
+    electrical              vg, vd, vs, trap,     igen, vdi, vsi, vgi;
+    thermal                                   Tj ;
+
+    (* desc = "total gate periphery (um)", units = "" *)
+    parameter real PERIPH = 1.0 from [0.001:inf);
+    
+    (* desc = "extracted gate periphery (um)", units = "" *)
+    parameter real XPERIPH = 1.0 from [0.001:inf);
+	
+    (* desc = "pinch off voltage", units = "" *)
+    parameter real VPO = -2.0 from (-inf:inf);
+    
+    (* desc = "pinch off voltage vs Vds", units = "" *)
+    parameter real VPO_LAMBDA = -0.0025 from (-inf:0];
+
+    (* desc = "Vg max", units = "" *)
+    parameter real VMAX = 1.6 from (0:inf);
+    
+    (* desc = "Ids/Gm magnitude parameter", units = "" *)
+    parameter real GM0 = 0.485 from (0:inf);
+    
+    (* desc = "Ids/Gm shaping parameter", units = "" *)
+    parameter real GM1 = 6.0 from (-inf:inf);
+    
+    (* desc = "Ids/Gm shaping parameter", units = "" *)
+    parameter real GM2 = 2.0 from (-inf:inf);
+    
+    (* desc = "Ids/Gm shaping parameter", units = "" *)
+    parameter real GM3 = 2.3 from (-inf:inf);
+    
+    (* desc = "Ids/Gm shaping parameter", units = "" *)
+    parameter real GM4 = 0.45 from (-inf:inf);
+    
+    (* desc = "GM0 vs Vds shaping parameter", units = "" *)
+    parameter real GM0_ALPHA = 0.0 from (-inf:inf);
+    
+    (* desc = "GM1 vs Vds shaping parameter", units = "" *)
+    parameter real GM1_ALPHA = 0.0 from (-inf:inf);
+    
+    (* desc = "GM2 vs Vds shaping parameter", units = "" *)
+    parameter real GM2_ALPHA = 0.0 from (-inf:inf);
+    
+    (* desc = "GM3 vs Vds shaping parameter", units = "" *)
+    parameter real GM3_ALPHA = 0.0 from (-inf:inf);
+    
+    (* desc = "GM4 vs Vds shaping parameter", units = "" *)
+    parameter real GM4_ALPHA = 0.0 from (-inf:inf);
+    
+    (* desc = "GM0 vs Vds shaping parameter", units = "" *)
+    parameter real GM0_BETA = 0.0 from (-inf:inf);
+    
+    (* desc = "GM1 vs Vds shaping parameter", units = "" *)
+    parameter real GM1_BETA = 0.0 from (-inf:inf);
+    
+    (* desc = "GM2 vs Vds shaping parameter", units = "" *)
+    parameter real GM2_BETA = 0.0 from (-inf:inf);
+    
+    (* desc = "GM3 vs Vds shaping parameter", units = "" *)
+    parameter real GM3_BETA = 0.0 from (-inf:inf);
+    
+    (* desc = "GM4 vs Vds shaping parameter", units = "" *)
+    parameter real GM4_BETA = 0.0 from (-inf:inf);
+    
+    (* desc = "Channel transit time delay", units = "" *)
+    parameter real TAU = 4.0 from (-inf:inf);
+    
+    (* desc = "Channel transit time delay offset voltage", units = "" *)
+    parameter real TAU_OFFSET = 25.0 from [0:inf);
+    
+    (* desc = "Channel transit time delay smoothing factor", units = "" *)
+    parameter real TAU_ALPHA = 0.1 from [0:inf);
+    
+    (* desc = "Gate capacitance parameter", units = "" *)
+    parameter real CG0 = 3.125e-12 from (-inf:inf);
+    
+    (* desc = "Gate capacitance parameter", units = "" *)
+    parameter real CD0 = 3.125e-12 from (-inf:inf);
+    
+    (* desc = "Gate capacitance magnitude factor", units = "" *)
+    parameter real C0 = 1.1e-12 from (-inf:inf);
+    
+    (* desc = "Gate capacitance shaping parameter", units = "" *)
+    parameter real C1 = 0.045 from (-inf:inf);
+    
+    (* desc = "Gate capacitance shaping parameter", units = "" *)
+    parameter real C2 = 0.0 from (-inf:inf);
+    
+    (* desc = "Gate capacitance Vds shaping factor", units = "" *)
+    parameter real CG_ALPHA = 0.0 from (-inf:inf);
+    
+    (* desc = "Drain capacitance magnitude factor", units = "" *)
+    parameter real D0 = -0.48e-12 from (-inf:inf);
+    
+    (* desc = "Drain capacitance shaping parameter", units = "" *)
+    parameter real D1 = 0.02 from (-inf:inf);
+    
+    (* desc = "Leakage parameter", units = "" *)
+    parameter real GLEAK1 = 0.0 from (-inf:inf);
+    
+    (* desc = "Leakage parameter", units = "" *)
+    parameter real GLEAK2 = 0.0 from (-inf:inf);
+    
+    (* desc = "Leakage parameter", units = "" *)
+    parameter real GLEAK3 = 0.0 from (-inf:inf);
+    
+    (* desc = "Leakage parameter", units = "" *)
+    parameter real GLEAK4 = 0.0 from (-inf:inf);
+    
+    (* desc = "Leakage parameter", units = "" *)
+    parameter real ALEAK1 = 0.0 from (-inf:inf);
+    
+    (* desc = "Leakage parameter", units = "" *)
+    parameter real ALEAK2 = 0.0 from (-inf:inf);
+	
+    (* desc = "Nominal (extraction) temperature", units = "" *)
+    parameter real TNOM = 25.0 from (-273.15:1000.0];
+    
+    (* desc = "Temperature scale factor for GM0", units = "" *)
+    parameter real T_GM0 = 0.0 from (-inf:inf);
+    
+    (* desc = "Temperature scale factor for GM1", units = "" *)
+    parameter real T_GM1 = 0.0 from (-inf:inf);
+    
+    (* desc = "Temperature scale factor for GM2", units = "" *)
+    parameter real T_GM2 = 0.0 from (-inf:inf);
+    
+    (* desc = "Temperature scale factor for GM3", units = "" *)
+    parameter real T_GM3 = 0.0 from (-inf:inf);
+    
+    (* desc = "Temperature scale factor for GM4", units = "" *)
+    parameter real T_GM4 = 0.0 from (-inf:inf);
+
+    (* desc = "Temperature offset factor for VPO", units = "" *)
+    parameter real T_VPO = 0.0 from (-inf:inf);
+
+    (* desc = "Temperature offset factor for VMAX", units = "" *)
+    parameter real T_VMAX = 0.0 from (-inf:inf);
+    
+    (* desc = "Temperature offset factor for Vds", units = "" *)
+    parameter real T_VDS0 = 1.0 from [0.0001:inf);
+    
+    (* desc = "Temperature multiplying factor for Vds", units = "" *)
+    parameter real T_VDS1 = 0.0 from [0.0:inf);
+	
+    (* desc = "total source/drain resistor width", units = "" *)
+    parameter real R_WID = 1.0 from [0.001:inf);
+	
+    (* desc = "drain access resistor length", units = "" *)
+    parameter real RD_LEN = 1.0 from [0.001:inf);
+	
+    (* desc = "source access resistor length", units = "" *)
+    parameter real RS_LEN = 1.0 from [0.001:inf);
+	
+    (* desc = "drain/source sheet resistivity min", units = "" *)
+    parameter real SRHO_MIN = 100.0 from [0:inf);
+    
+    (* desc = "drain/source sheet resistivity temperature slope", units = "" *)
+    parameter real SRHO_SLOPE = 0.0 from [0:inf);
+    
+    (* desc = "drain/source sheet resistivity temperature offset", units = "" *)
+    parameter real SRHO_TOFFSET = 0.0 from [-273.15:inf);
+    
+    (* desc = "drain/source sheet resistivity temperature smoothing factor", units = "" *)
+    parameter real SRHO_ALPHA = 10.0 from [0:inf);
+    
+    (* desc = "drain/source resistor max current", units = "" *)
+    parameter real SRHO_IMAX = 1.15 from [0:inf);
+
+    (* desc = "drain/source contact resistance", units = "" *)
+    parameter real RCONTACT = 0.35 from [0:inf);
+    
+    (* desc = "temperature scale factor for srho_imax", units = "" *)
+    parameter real T_SRHO_IMAX = 0.0 from (-inf:0];
+    
+    (* desc = "temperature scale factor for RCONTACT", units = "" *)
+    parameter real T_RC = 0.0 from (-inf:inf);
+	
+    (* desc = "diode saturation current factor", units = "" *)
+    parameter real IS_FACT = -16.0 from (-inf:inf);
+    
+    (* desc = "diode exponential factor", units = "" *)
+    parameter real EXP_FACT = 20.0 from (-inf:inf);
+    
+    (* desc = "temperature factor for the diode saturation current", units = "" *)
+    parameter real T_IS = 0.0 from (-inf:inf);
+    
+    (* desc = "temperature factor for the diode exponetial", units = "" *)
+    parameter real T_EXP = 0.0 from (-inf:inf);
+
+`include "erf.h"    
+    
+	analog function real exp1;
+		input x;
+		real x;
+		begin
+			if (x > `MAX_EXP)
+				exp1 = exp(`MAX_EXP)*(1.0 + (x-`MAX_EXP) + 0.5*(x-`MAX_EXP)*(x-`MAX_EXP));
+			else
+				exp1 = exp(x);	
+		end
+	endfunction
+	
+    analog function real Ids_helper1;
+        // compute parameterized portions of the Ids function that can
+        // be re-used to compute the total Ids
+        input v, gm1, gm2;
+        real  v, gm1, gm2;
+        // local vars
+        real f1, f2, e1, e2, sqrt_gm1_gm2_sq, inv_gm1_sqrtpi, inv_gm2_sqrtpi;
+        real ids_a, ids_b, ids_c, ids_d, ids_e, ids_f, ids_g;
+        begin
+            f1 = erf(gm1*v);
+            f2 = erf(gm2*v);
+            e1 = exp(-1.0*gm1*gm1*v*v);
+            e2 = exp(-1.0*gm2*gm2*v*v);
+            sqrt_gm1_gm2_sq = sqrt(gm1*gm1+gm2*gm2);
+            inv_gm1_sqrtpi = 1.0 / (gm1 * `SQRTPI);
+            inv_gm2_sqrtpi = 1.0 / (gm2 * `SQRTPI);
+            ids_a = v;
+            ids_b = v*f1 + e1 * inv_gm1_sqrtpi;
+            ids_c = v*f2 + e2 * inv_gm2_sqrtpi;
+            ids_d = v*f1*f2;
+            ids_e = f1 * e2 * inv_gm2_sqrtpi;
+            ids_f = f2 * e1 * inv_gm1_sqrtpi;
+            ids_g = -(1.0+erf(sqrt_gm1_gm2_sq*v)) * sqrt_gm1_gm2_sq / (gm1*gm2*`SQRTPI);
+            Ids_helper1 = 0.25*(ids_a + ids_b + ids_c + ids_d + ids_e + ids_f + ids_g);
+        end
+    endfunction //Ids_helper1
+    
+    analog function real Ids_x;
+        // compute Ids(x)
+        input v, gm1, gm2, gm3, gm4, vpo, vmax;
+        real  v, gm1, gm2, gm3, gm4, vpo, vmax;
+        // local vars
+        real v_offset, ids_multiplier;
+        begin
+            ids_multiplier = 0.5*((vmax-vpo)+sqrt((v-vpo)*(v-vpo)+gm4*gm4)-sqrt((v-vmax)*(v-vmax)+gm4*gm4))/(vmax-vpo);
+            v_offset = gm3*ids_multiplier;
+            Ids_x = Ids_helper1(v-vpo,gm1,gm2) - Ids_helper1(v-vpo-v_offset,gm1,gm2)*ids_multiplier;
+        end
+    endfunction //Ids_x
+
+    
+    analog function real Qgx_helper1;
+        // compute parameterized portions of the Qgx function that can
+        // be re-used to compute the total Qgx for a branch
+        input v, c0, c1, f;
+        real  v, c0, c1, f;
+        // local vars
+        begin
+            Qgx_helper1 = c0*0.5*erf(c1*v)*v + c0*0.5*exp(-1.0*(c1*c1*v*v))/(c1*`SQRTPI) + f*c0*0.5*v;
+        end
+    endfunction //Qgx_helper1
+    
+    analog function real smooth_upper_limit;
+        // compute an upper limit smoothing function
+        input v, v_max, alpha;
+        real  v, v_max, alpha;
+        // local vars
+        begin
+            smooth_upper_limit = v - 0.5*(v-v_max+sqrt((v-v_max)*(v-v_max)+alpha));
+        end
+    endfunction //smooth_upper_limit
+        
+    analog function real smooth_lower_limit;
+        // compute a lower limit smoothing function
+        input v, v_min, alpha;
+        real  v, v_min, alpha;
+        // local vars
+        begin
+            smooth_lower_limit = v + 0.5*(v_min-v+sqrt((v_min-v)*(v_min-v)+alpha));
+        end
+    endfunction //smooth_lower_limit
+	
+    analog function real smooth_range_limit;
+        // compute a smoothing function with both
+		// an upper and lower limit
+        input v, v_min, v_max, alpha;
+        real  v, v_min, v_max, alpha;
+        // local vars
+        begin
+            smooth_range_limit = v + 0.5*(v_min-v+sqrt((v_min-v)*(v_min-v)+alpha)) - 0.5*(v-v_max+sqrt((v-v_max)*(v-v_max)+alpha));
+        end
+    endfunction //smooth_range_limit
+	
+    /*****************************************************************************/
+    /*****************************************************************************/
+
+    analog begin : main
+    
+        real SF, c0_scaled, d0_scaled;
+        real Vgs, Vgd, Vds, T_deg_C, Ids, Ids_no_delay, Vgs_Tau_vs_Vds, Vgd_Tau_vs_Vds;
+        real Vgs_delay, Vgd_delay, Vds_delay;
+        real tfact, gm0_tsf, gm1_tsf, gm2_tsf, gm3_tsf, gm4_tsf, vpo_toffs, vmax_toffs;
+        real Tj_max, Tj_min;
+        real Tj_max_gm0, Tj_min_gm0, tfact_gm0, T_deg_C_gm0;
+        real vpo_scaled, vmax_scaled;
+        real gm0_scaled, gm1_scaled, gm2_scaled, gm3_scaled, gm4_scaled;
+        real cg0_scaled, cd0_scaled;
+        real erf_factor, ids_erf_factor, t_leak_factor;
+        real Qgs1, Qgs2, Qgd1, Qgd2, Qgs, Qgd, Qds;
+        real Ggs, Ggd, t_leakage, leak_diff, one_third;
+        real sd_rdfact, sd_rsfact, sd_rcfact, sd_ifact;
+        real sd_sheetr, sd_contr, sd_rdtotal, sd_rstotal, sd_imax;
+        real diode_is, diode_arg, is_fact_calc;
+
+        /////////////////////////////////////////////////////////////////////////
+        @(initial_step) begin : atstart
+			// scaling factor
+			SF = PERIPH / XPERIPH;
+			
+            // charge/current constants
+            c0_scaled = C0*SF;        
+            d0_scaled = D0*SF;
+			
+			// leakage constants
+            t_leak_factor = pow(1.0/273.15,1.0/3.0);
+            leak_diff = GLEAK2 - GLEAK1;
+			one_third = 1.0/3.0;
+			
+			// source/drain resistor constants
+            sd_rdfact = RD_LEN / PERIPH;        
+            sd_rsfact = RS_LEN / PERIPH;        
+            sd_rcfact = 1000.0 / PERIPH;        
+            sd_ifact = SRHO_IMAX * PERIPH / 1000.0;
+
+			// compute the min and max temperature (degrees C) for the overall
+			// model based on the various temperature parameters
+
+			// separate min and max temperature for GM0 to force Ids to zero at infinity
+
+			Tj_max_gm0 = 1000.0;
+			Tj_min_gm0 = -270.0;
+
+			if(T_GM0 < 0)
+			   Tj_max_gm0 = min(Tj_max_gm0,TNOM-1.0/T_GM0);
+			if(T_GM0 > 0)
+			   Tj_min_gm0 = max(Tj_min_gm0,TNOM-1.0/T_GM0);
+
+			Tj_max_gm0 = Tj_max_gm0 - 10.0;
+			Tj_min_gm0 = Tj_min_gm0 + 10.0;
+
+			// min and max temperature for all other temperature parameters
+
+			Tj_max = 1000.0;
+			Tj_min = -270.0;
+
+			if(T_GM1 < 0)
+			   Tj_max = min(Tj_max,TNOM-1.0/T_GM1);
+			if(T_GM1 > 0)
+			   Tj_min = max(Tj_min,TNOM-1.0/T_GM1);
+			if(T_GM2 < 0)
+			   Tj_max = min(Tj_max,TNOM-1.0/T_GM2);
+			if(T_GM2 > 0)
+			   Tj_min = max(Tj_min,TNOM-1.0/T_GM2);
+			if(T_GM3 < 0)
+			   Tj_max = min(Tj_max,TNOM-1.0/T_GM3);
+			if(T_GM3 > 0)
+			   Tj_min = max(Tj_min,TNOM-1.0/T_GM3);
+			if(T_GM4 < 0)
+			   Tj_max = min(Tj_max,TNOM-1.0/T_GM4);
+			if(T_GM4 > 0)
+			   Tj_min = max(Tj_min,TNOM-1.0/T_GM4);
+			if(T_VDS1 > 0)
+			   Tj_min = max(Tj_min,TNOM-T_VDS0/T_VDS1);
+			if(T_EXP < 0)
+				Tj_max = min(Tj_max,TNOM-EXP_FACT/T_EXP);
+			if(T_EXP > 0)
+				Tj_min = max(Tj_min,TNOM-EXP_FACT/T_EXP);				
+			if(T_RC < 0)
+			   Tj_max = min(Tj_max,TNOM-RCONTACT/T_RC);
+			if(T_RC > 0)
+			   Tj_min = max(Tj_min,TNOM-RCONTACT/T_RC);			   
+			if(T_SRHO_IMAX < 0)
+			   Tj_max = min(Tj_max,TNOM-1.0/T_SRHO_IMAX);
+			if(T_SRHO_IMAX > 0)
+			   Tj_min = max(Tj_min,TNOM-1.0/T_SRHO_IMAX);			   
+
+			Tj_max = Tj_max - 10.0;
+			Tj_min = Tj_min + 10.0;
+						
+        end
+        /////////////////////////////////////////////////////////////////////////
+
+        Vgs = V(vg,vsi) + V(trap);
+        Vds = V(vdi,vsi);
+        Vgd = V(vg,vdi) + V(trap);
+        
+        Vgs_Tau_vs_Vds = TAU*1.0e-12*0.5*(1.0+erf(TAU_ALPHA*(Vds-TAU_OFFSET)));
+        Vgd_Tau_vs_Vds = TAU*1.0e-12*0.5*(1.0+erf(TAU_ALPHA*(-Vds+TAU_OFFSET)));
+
+        Vgs_delay = absdelay(V(vg,vsi),Vgs_Tau_vs_Vds,TAU*1.0e-12) + V(trap);
+        Vds_delay = Vds;
+        Vgd_delay = absdelay(V(vg,vdi),Vgd_Tau_vs_Vds,TAU*1.0e-12) + V(trap);
+
+        //////////// constrain Tj between Tj_min and Tj_max deg C ///////////////////
+		
+        T_deg_C = smooth_range_limit(Temp(Tj),Tj_min,Tj_max,`TJ_ALPHA);
+        T_deg_C_gm0 = smooth_range_limit(Temp(Tj),Tj_min_gm0,Tj_max_gm0,`TJ_ALPHA);
+        
+        /////////////////// scaled parameters ///////////////////
+        
+        tfact = T_deg_C - TNOM;
+        tfact_gm0 = T_deg_C_gm0 - TNOM;
+        gm0_tsf = 1.0 + T_GM0*tfact_gm0;
+        gm1_tsf = 1.0 + T_GM1*tfact;
+        gm2_tsf = 1.0 + T_GM2*tfact;
+        gm3_tsf = 1.0 + T_GM3*tfact;
+        gm4_tsf = 1.0 + T_GM4*tfact;
+        vpo_toffs = T_VPO*tfact;        
+        vmax_toffs = T_VMAX*tfact;        
+        erf_factor = 0.475 / (T_VDS0+T_VDS1*tfact);
+        
+        vpo_scaled = VPO+vpo_toffs+VPO_LAMBDA*Vds;
+        vmax_scaled = VMAX+vmax_toffs+VPO_LAMBDA*Vds;
+        gm0_scaled = GM0*SF*gm0_tsf*((1.0-GM0_BETA)*exp(GM0_ALPHA*Vds*Vds)+GM0_BETA);
+        gm1_scaled = GM1*gm1_tsf*((1.0-GM1_BETA)*exp(GM1_ALPHA*Vds*Vds)+GM1_BETA);
+        gm2_scaled = GM2*gm2_tsf*((1.0-GM2_BETA)*exp(GM2_ALPHA*Vds*Vds)+GM2_BETA);
+        gm3_scaled = GM3*gm3_tsf*((1.0-GM3_BETA)*exp(GM3_ALPHA*Vds*Vds)+GM3_BETA);
+        gm4_scaled = GM4*gm4_tsf*((1.0-GM4_BETA)*exp(GM4_ALPHA*Vds*Vds)+GM4_BETA);
+        cg0_scaled = CG0*SF*gm0_tsf;        
+        cd0_scaled = CD0*SF*gm0_tsf;        
+        
+        /////////////////// drain current ///////////////////
+
+        ids_erf_factor = erf(Vds_delay*erf_factor);
+        Ids = gm0_scaled*Ids_x(Vgs_delay,gm1_scaled,gm2_scaled,gm3_scaled,gm4_scaled,vpo_scaled,vmax_scaled)*0.5*(1.0+ids_erf_factor) -
+			  gm0_scaled*Ids_x(Vgd_delay,gm1_scaled,gm2_scaled,gm3_scaled,gm4_scaled,vpo_scaled,vmax_scaled)*0.5*(1.0-ids_erf_factor);
+        Ids_no_delay = gm0_scaled*Ids_x(Vgs,gm1_scaled,gm2_scaled,gm3_scaled,gm4_scaled,vpo_scaled,vmax_scaled)*0.5*(1.0+ids_erf_factor) -
+					   gm0_scaled*Ids_x(Vgd,gm1_scaled,gm2_scaled,gm3_scaled,gm4_scaled,vpo_scaled,vmax_scaled)*0.5*(1.0-ids_erf_factor);
+                
+        /////////////////// charge ///////////////////
+        
+        Qgs1 = cg0_scaled*Ids_x(Vgs,gm1_scaled,gm2_scaled,gm3_scaled,gm4_scaled,vpo_scaled,vmax_scaled)*0.5*(1.0+erf(CG_ALPHA*(Vds-vpo_scaled)*erf_factor));        
+        Qgs2 = Qgx_helper1(Vgs-C2,c0_scaled,C1,1.0);
+        
+        Qgd1 = cd0_scaled*Ids_x(Vgd,gm1_scaled,gm2_scaled,gm3_scaled,gm4_scaled,vpo_scaled,vmax_scaled)*0.5*(1.0-erf(CG_ALPHA*(Vds+vpo_scaled)*erf_factor));        
+        Qgd2 = Qgx_helper1(Vgd-C2,c0_scaled,C1,1.0);
+        
+        Qgs = Qgs1 + Qgs2;
+        Qgd = Qgd1 + Qgd2;
+        Qds = Qgx_helper1(Vds,d0_scaled,D1,-1.0);
+        
+        /////////////////// leakage ///////////////////
+        
+        t_leakage = exp(t_leak_factor-pow(1.0/(T_deg_C+`T0),one_third));
+        Ggs = SF*t_leakage*(GLEAK4*(1.0-exp(-ALEAK2*pow(V(vg,vsi),4.0)))+GLEAK3*exp(-ALEAK2*pow(V(vg,vsi),4.0)));
+        Ggd = SF*t_leakage*(GLEAK2*(1.0-exp(-ALEAK1*pow(V(vg,vdi),4.0)))+GLEAK1*exp(-ALEAK1*pow(V(vg,vdi),4.0)));
+		
+        /////////////////// source and drain access resistors ///////////////////
+				
+        sd_sheetr = SRHO_MIN + 0.5*SRHO_SLOPE*(T_deg_C-SRHO_TOFFSET + sqrt((T_deg_C-SRHO_TOFFSET)*(T_deg_C-SRHO_TOFFSET)+SRHO_ALPHA*SRHO_ALPHA));
+        sd_contr = RCONTACT + tfact*T_RC;
+        sd_imax = sd_ifact * (1.0 + T_SRHO_IMAX*tfact);
+		
+        sd_rdtotal = sd_sheetr*sd_rdfact + sd_contr*sd_rcfact;
+        sd_rstotal = sd_sheetr*sd_rsfact + sd_contr*sd_rcfact;
+		
+        /////////////////// gate diodes ///////////////////
+				
+        is_fact_calc = smooth_upper_limit(T_IS*tfact+IS_FACT,-4.0,0.01);
+        diode_is = 0.5*pow(10.0,is_fact_calc)*SF;
+        diode_arg = T_EXP*tfact + EXP_FACT;
+
+        /////////////////// compute outputs ///////////////////
+        
+		// core Jackal model
+        I(vdi,vsi)  <+ `GMIN*V(vdi,vsi) + Ids + ddt(Qds);
+        I(vg,vsi)   <+ `GMIN*V(vg,vsi) + ddt(Qgs) + Ggs*V(vg,vsi);
+        I(vg,vdi)   <+ `GMIN*V(vg,vdi) + ddt(Qgd) + Ggd*V(vg,vdi);
+        I(trap)     <+ V(trap);    // this is a 1 ohm resistor to ground that converts trap current to voltage
+		
+		// source/drain access resistors
+		I(vd,vdi)   <+ sd_imax * tanh( V(vd,vdi) / (sd_rdtotal*sd_imax) );
+		I(vs,vsi)   <+ sd_imax * tanh( V(vs,vsi) / (sd_rstotal*sd_imax) );
+		
+		// gate diodes + series gate resistance of 20 Ohm-mm
+		I(vg,vgi)    <+ V(vg,vgi)*SF*0.05;
+		I(vgi,vsi)   <+ diode_is*(exp1(diode_arg*V(vgi,vsi)) - 1.0);
+		I(vgi,vdi)   <+ diode_is*(exp1(diode_arg*V(vgi,vdi)) - 1.0);
+				
+		// power generation
+        Pwr(Tj)     <+ `GMIN*Temp(Tj) - Ids*Vds;
+		
+		// output of non-delayed Ids current
+        I(igen)     <+ -Ids_no_delay;
+
+    end
+    
+endmodule

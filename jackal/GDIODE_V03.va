@@ -1,0 +1,103 @@
+/*
+      Gate diode model for the Jackal FET
+      Version 0.1
+*/
+
+`include "disciplines.h"
+`include "constants.h"
+
+`define   GMIN      1.0e-12
+`define   SQRTPI    1.7724538509055160273
+`define   MAX_EXP   60.0
+
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+module GDIODE_V03 ( va, vc, Td );
+    inout           va, vc, Td  ;
+    electrical      va, vc      ;
+    thermal                 Td  ;
+
+    (* desc = "scaling factor", units = "" *)
+    parameter real SF = 1.0 from (0:inf);
+    
+    (* desc = "diode saturation current factor", units = "" *)
+    parameter real IS_FACT = -15.28191 from (-inf:inf);
+    
+    (* desc = "diode exponential factor", units = "" *)
+    parameter real EXP_FACT = 27.175 from (-inf:inf);
+    
+    (* desc = "Nominal (extraction) temperature for temperature scale factors", units = "" *)
+    parameter real TNOM = 25.0 from [-273.15:1000.0];
+            
+    (* desc = "temperature factor for the diode saturation current", units = "" *)
+    parameter real T_IS = 0.0326 from (-inf:inf);
+    
+    (* desc = "temperature factor for the diode exponetial", units = "" *)
+    parameter real T_EXP = -0.041 from (-inf:inf);
+    
+    /*****************************************************************************/
+    /*****************************************************************************/
+
+	analog function real exp1;
+		input x;
+		real x;
+		begin
+			if (x > `MAX_EXP)
+				exp1 = exp(`MAX_EXP)*(1.0 + (x-`MAX_EXP) + 0.5*(x-`MAX_EXP)*(x-`MAX_EXP));
+			else
+				exp1 = exp(x);	
+		end
+	endfunction
+
+    analog begin : main
+    
+        real Tdd, T_pow_deg_C, T_arg_deg_C, tfact, arg, Td_min, Td_pow_max, Td_arg_max;
+        real Vdiode, Is, Idiode;
+
+        Vdiode = V(va,vc);
+
+        /////////////////////////////////////////////////////////////////////////
+        @(initial_step) begin : atstart
+            // compute constants
+            Td_min = -200.0;
+            Td_pow_max = TNOM - IS_FACT/T_IS - 100.0;
+            Td_arg_max = TNOM - EXP_FACT/T_EXP - 100.0;
+        end
+        /////////////////////////////////////////////////////////////////////////
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////
+        /////// constrain Td between Td_min and Td_pow_max or Td_arg_max deg C                  ///////
+        /////// Td_pow_max is to prevent the pow function below from having a negative exponent ///////
+        /////// Td_arg_max is to prevent the limexp function below from having a negative arg   ///////
+        ///////////////////////////////////////////////////////////////////////////////////////////////
+        
+        Tdd = Temp(Td);
+        T_pow_deg_C = Tdd - 0.5*((Tdd-Td_pow_max)+sqrt((Tdd-Td_pow_max)*(Tdd-Td_pow_max)+2500.0)) + 0.5*((Td_min-Tdd)+sqrt((Td_min-Tdd)*(Td_min-Tdd)+2500.0));
+        T_arg_deg_C = Tdd - 0.5*((Tdd-Td_arg_max)+sqrt((Tdd-Td_arg_max)*(Tdd-Td_arg_max)+2500.0)) + 0.5*((Td_min-Tdd)+sqrt((Td_min-Tdd)*(Td_min-Tdd)+2500.0));
+
+        if (T_pow_deg_C > T_arg_deg_C)
+           tfact = T_arg_deg_C - TNOM;
+        else
+           tfact = T_pow_deg_C - TNOM;
+
+        /////////////////////////////////////////////////////////////////////////
+        
+        Is = 0.5*pow(10.0,(T_IS*tfact+IS_FACT))*SF;
+        arg = T_EXP*tfact + EXP_FACT;
+        Idiode = Is*(exp1(arg*Vdiode) - 1.0);
+                
+        I(va,vc)  <+ Idiode;
+//      Pwr(Td)   <+ `GMIN*Temp(Td);
+//      Pwr(Td)   <+ `GMIN*Temp(Td) - abs(Vdiode*Idiode);  //
+
+    end
+    
+endmodule
+
+
+
+
+
+
+

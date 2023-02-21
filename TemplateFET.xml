@@ -1,0 +1,722 @@
+<?xml version="1.0"?>
+<!DOCTYPE Template SYSTEM "template_format.dtd">
+<Template title="TemplateFET" helpFile="">
+    <Parameters>
+        <!-- Heat Generation -->
+        <AParam id="HL"             name="Heater length"                                value="0.4"     min="0.4"                                                           max="0.4"                                                           units="um"      type=""                 description="Length of 2D heat source"                                                                                                      />
+        <AParam id="Poff"           name="Off Power"                                    value="0"       min="0"                                                             max="50"                                                            units="W/mm"    type="Heat Generation"  description="Off Power (density W/mm)"                                                      record="true"   equalizeOverMMIC="true"         />
+        <AParam id="Pon"            name="On Power"                                     value="4"       min="0"                                                             max="50"                                                            units="W/mm"    type="Heat Generation"  description="On Power (density W/mm)"                                                       record="true"   equalizeOverMMIC="true"         />
+        <AParam id="DC"             name="Duty Cycle"                                   value="10"      min="0"                                                             max="50"                                                            units="%"       type="Heat Generation"  description="Duty Cycle (%)"                                                                record="true"   equalizeOverMMIC="true"         />
+        <AParam id="PW"             name="Pulse Width"                                  value="10"      min="0"                                                             max="50000"                                                         units="us"      type="Heat Generation"  description="Pulse Width (us) Duration of ON Power Pulse"                                   record="true"   equalizeOverMMIC="true"         />
+        <AParam id="TBase"          name="Baseplate Temperature"                        value="25"      min="-273.15"                                                       max="1000"                                                          units="degC"    type="Heat Generation"  description="Baseplate temperature"                                                                                                         />
+        <!-- Mesh Controls -->
+        <AParam id="RamanLength"    name="Raman Length"                                 value="0.5"     min="0.001"                                                         max="G2D-SFP"                                                       units="um"      type=""                 description="Length of Raman meshing region"                                                record="true"                                   />
+        <AParam id="RamanWidth"     name="Raman Width"                                  value="0.5"     min="0.001"                                                         max="10"                                                            units="um"      type=""                 description="Width of Raman meshing region"                                                 record="true"                                   />
+        <AParam id="NRamanLength"   name="Nodes in Raman Length"                        value="2"       min="1"                                                             max="1000"                                                          units=""        type=""                 description="Number of nodes in length of Raman meshing region"                             record="true"                                   />
+        <AParam id="NRamanWidth"    name="Nodes in Raman Width"                         value="2"       min="1"                                                             max="1000"                                                          units=""        type=""                 description="Number of nodes in width of Raman meshing region"                              record="true"                                   />
+        <AParam id="NHL"            name="Nodes in Heater Length (excl. SFP overlap)"   value="3"       min="1"                                                             max="1000"                                                          units=""        type=""                 description="Number of nodes in length of heat source"                                      record="true"                                   />
+        <AParam id="NBZ"            name="Z Node Bias"                                  value="1.4"     min="1"                                                             max="1000"                                                          units=""        type=""                 description="Node bias in Z direction"                                                      record="true"                                   />
+        <AParam id="NBY"            name="Y Node Bias"                                  value="1.4"     min="1"                                                             max="1000"                                                          units=""        type=""                 description="Node bias in Y direction"                                                      record="true"                                   />
+        <AParam id="NBX"            name="X Node Bias"                                  value="1.4"     min="1"                                                             max="1000"                                                          units=""        type=""                 description="Node bias in X direction"                                                      record="true"                                   />
+        <AParam id="XMS"            name="X Minimum Size"                               value="5"       min="0.001"                                                         max="1000"                                                          units=""        type=""                 description="Minimum mesh size along gate finger width"                                     record="true"                                   />
+        <!-- FET Geometry -->
+        <AParam id="SFP"            name="Source Field Plate Length"                    value="2"       min="GFPD+HL+0.1"                                                   max="1000"                                                          units="um"      type=""     description="Distance from edge of gate stem to outer edge of field plate"                  record="true"                                   />
+        <AParam id="GFPD"           name="Gate field plate length towards drain"        value="0.45"    min="0"                                                             max="1000"                                                          units="um"      type=""     description="Extension of gate metal from stem on drain side"                               record="true"                                   />
+        <AParam id="GFPS"           name="Gate field plate length towards source"       value="0.45"    min="0"                                                             max="1000"                                                          units="um"      type=""     description="Extension of gate metal from stem on source side"                              record="true"                                   />
+        <AParam id="GL"             name="Gate length"                                  value="0.4"     min="0.001"                                                         max="1000"                                                          units="um"      type=""     description="Length of gate stem"                                                           record="true"                                   />
+        <AParam id="G2GD"           name="Gate-to-Gate pitch over drain"                value="50"      min="10"                                                            max="1000"                                                          units="um"      type="FET Geometry"     description="Gate pitch over drain (measured between centers of ohmic gaps)"                record="true"                                   />
+        <AParam id="G2GS"           name="Gate-to-Gate pitch over source"               value="50"      min="10"                                                            max="1000"                                                          units="um"      type="FET Geometry"     description="Gate pitch over source (measured between centers of ohmic gaps)"               record="true"                                   />
+        <AParam id="G2D"            name="Gate-to-Drain Spacing"                        value="5"       min="SFP+0.1"                                                       max="1000"                                                          units="um"      type=""     description="Spacing from gate stem to drain ohmic"                                         record="true"                                   />
+        <AParam id="G2S"            name="Gate-to-Source Spacing"                       value="1"       min="GFPS+ThSiNB"                                                   max="1000"                                                          units="um"      type=""     description="Spacing from gate stem to source ohmic"                                        record="true"                                   />
+        <AParam id="UGW"            name="Unit Gate Width"                              value="200"     min="20"                                                            max="1000"                                                          units="um"      type="FET Geometry"     description="Unit Gate Width"                                                               record="true"                                   />
+        <AParam id="NGF"            name="Number of Gate Fingers"                       value="1"       min="1"                                                             max="1000"                                                          units=""        type="FET Geometry"     description="Number of Gate Fingers in entire model"                                        record="true"                                   />
+        <AParam id="OffsY"          name="Die Y Offset"                                 value="0"       min="-0.5*(DieLength-ActiveLength)"                                 max="0.5*(DieLength-ActiveLength)"                                  units="um"      type="FET Geometry"     description="Y Offset of center of device from center of die"                               record="true"                                   />
+        <AParam id="OffsX"          name="Die X Offset"                                 value="0"       min="-0.5*(DieWidth-ActiveWidth)"                                   max="0.5*(DieWidth-ActiveWidth)"                                    units="um"      type="FET Geometry"     description="X Offset of center of device from center of die"                               record="true"                                   />
+        <AParam id="PackageOffsY"   name="Package Y Offset"                             value="0"       min="-0.5*DieLength"                                                max="0.5*DieLength"                                                 units="um"      type="FET Geometry"     description="Y Offset of center of die from center of package"                              record="true"                                   />
+        <AParam id="PackageOffsX"   name="Package X Offset"                             value="0"       min="-0.5*DieWidth"                                                 max="0.5*DieWidth"                                                  units="um"      type="FET Geometry"     description="X Offset of center of die from center of package"                              record="true"                                   />
+        <AParam id="DieLength"      name="Die Length"                                   value="1000"    min="ActiveLength"                                                  max="10000"                                                         units="um"      type="FET Geometry"     description="Length of Die"                                                                 record="true"                                   />
+        <AParam id="DieWidth"       name="Die Width"                                    value="1000"    min="ActiveWidth"                                                   max="10000"                                                         units="um"      type="FET Geometry"     description="Width of Die"                                                                  record="true"                                   />
+        <AParam id="PackageLength"  name="Package Length"                               value="2000"    min="DieLength"                                                     max="1000000"                                                       units="um"      type="FET Geometry"     description="Length of Package"                                                             record="true"                                   />
+        <AParam id="PackageWidth"   name="Package Width"                                value="2000"    min="DieWidth"                                                      max="1000000"                                                       units="um"      type="FET Geometry"     description="Width of Package"                                                              record="true"                                   />
+        <!-- Stackup -->
+        <AParam id="ThHeatsink"     name="Heatsink Thickness"                           value="0"       min="0.0"                                                           max="0.0"                                                           units="um"      type=""                 description="Thickness of heatsink"                                                         record="true"                                   />
+        <AParam id="ThThermalPaste" name="Thermal Paste Thickness"                      value="0"       min="0.0"                                                           max="0.0"                                                           units="um"      type=""                 description="Thickness of thermal paste"                                                    record="true"                                   />
+        <AParam id="ThPackageBot"   name="Package Bottom Thickness"                     value="254"     min="0.0"                                                           max="100000"                                                        units="um"      type="Stackup"          description="Thickness of package bottom layer"                                             record="true"                                   />
+        <AParam id="ThPackageMid"   name="Package Middle Thickness"                     value="1016"    min="0.0"                                                           max="100000"                                                        units="um"      type="Stackup"          description="Thickness of package middle layer"                                             record="true"                                   />
+        <AParam id="ThPackageTop"   name="Package Top Thickness"                        value="254"     min="0.0"                                                           max="100000"                                                        units="um"      type="Stackup"          description="Thickness of package top layer"                                                record="true"                                   />
+        <AParam id="ThAttach"       name="Die Attach Thickness"                         value="20"      min="0.0"                                                           max="100000"                                                        units="um"      type="Stackup"          description="Thickness of die attach"                                                       record="true"                                   />
+        <AParam id="ThBackMetal"    name="Backside Metal Thickness"                     value="6"       min="0.0"                                                           max="100000"                                                        units="um"      type=""          description="Thickness of backside metal"                                                   record="true"                                   />
+        <AParam id="ThSi"           name="Silicon Substrate Thickness"                  value="50.8"    min="0.0"                                                           max="100000"                                                        units="um"      type="Stackup"          description="Thickness of silicon substrate"                                                record="true"                                   />
+        <AParam id="ThAlN"          name="AlN Nucleation Thickness"                     value="0.1"     min="0.0"                                                           max="100000"                                                        units="um"      type=""          description="Thickness of AlN nucleation Layer"                                             record="true"                                   />
+        <AParam id="ThTL"           name="Transition Layer Thickness"                   value="0.695"   min="0.0"                                                           max="100000"                                                        units="um"      type=""          description="Thickness of AlGaN transition Layer"                                           record="true"                                   />
+        <AParam id="ThGaN"          name="GaN Buffer Thickness"                         value="0.8"     min="0.0"                                                           max="100000"                                                        units="um"      type=""          description="Thickness of GaN buffer layer"                                                 record="true"                                   />
+        <AParam id="ThAlGaN"        name="AlGaN Cap Thickness"                          value="0.016"   min="0.0"                                                           max="100000"                                                        units="um"      type=""          description="Thickness of AlGaN cap layer"                                                  record="true"                                   />
+        <AParam id="ThSiNA"         name="1st SiN Thickness"                            value="0.075"   min="0.0"                                                           max="100000"                                                        units="um"      type=""          description="Thickness of first nitride and gate stem"                                      record="true"                                   />
+        <AParam id="ThSiNB"         name="2nd SiN Thickness"                            value="0.33"    min="0.0"                                                           max="100000"                                                        units="um"      type=""          description="Thickness of second nitride, and distance between gate cap and field plate"    record="true"                                   />
+        <AParam id="ThSiNTotal"     name="Total SiN Thickness"                          value="3"       min="0.0"                                                           max="100000"                                                        units="um"      type=""          description="Thickness of SiN in total (including SiNA and SiNB)"                           record="true"                                   />
+        <AParam id="ThOhmic"        name="Ohmic Thickness"                              value="0.315"   min="0.0"                                                           max="ThSiNA + ThSiNB"                                               units="um"      type=""          description="Thickness of ohmic metal"                                                      record="true"                                   />
+        <AParam id="ThGateCap"      name="Gate Cap Thickness"                           value="0.505"   min="0.0"                                                           max="100000"                                                        units="um"      type=""          description="Thickness of gate cap metal"                                                   record="true"                                   />
+        <AParam id="ThMet1"         name="Metal Thickness"                              value="1.07"    min="0.0"                                                           max="100000"                                                        units="um"      type=""          description="Thickness of metal and source field plate"                                     record="true"                                   />
+        <!-- Calculated Values -->
+        <AParam id="DieBot"         name="Die Offset Bottom"                            value="0.0"     min="DieLength-(0.5*DieLength-OffsY+0.5*ActiveLength)"              max="DieLength-(0.5*DieLength-OffsY+0.5*ActiveLength)"              units="um"      type="Calculations"     description="Empty die space to the bottom of the active area"                              record="false"                                  />
+        <AParam id="DieTop"         name="Die Offset Top"                               value="0.0"     min="0.5*DieLength-OffsY-0.5*ActiveLength"                          max="0.5*DieLength-OffsY-0.5*ActiveLength"                          units="um"      type="Calculations"     description="Empty die space to the top of the active area"                                 record="false"                                  />
+        <AParam id="DieRight"       name="Die Offset Right"                             value="0.0"     min="DieWidth-(0.5*DieWidth+OffsX+0.5*UGW)"                         max="DieWidth-(0.5*DieWidth+OffsX+0.5*UGW)"                         units="um"      type="Calculations"     description="Empty die space to the right of the active area"                               record="false"                                  />
+        <AParam id="DieLeft"        name="Die Offset Left"                              value="0.0"     min="0.5*DieWidth+OffsX-0.5*UGW"                                    max="0.5*DieWidth+OffsX-0.5*UGW"                                    units="um"      type="Calculations"     description="Empty die space to the left of the active area"                                record="false"                                  />
+        <AParam id="PackageBot"     name="Package Offset Bottom"                        value="0.0"     min="PackageLength-(0.5*PackageLength-PackageOffsY+0.5*DieLength)"  max="PackageLength-(0.5*PackageLength-PackageOffsY+0.5*DieLength)"  units="um"      type="Calculations"     description="Empty package space to the bottom of the die"                                  record="false"                                  />
+        <AParam id="PackageTop"     name="Package Offset Top"                           value="0.0"     min="0.5*PackageLength-PackageOffsY-0.5*DieLength"                  max="0.5*PackageLength-PackageOffsY-0.5*DieLength"                  units="um"      type="Calculations"     description="Empty package space to the top of the die"                                     record="false"                                  />
+        <AParam id="PackageRight"   name="Package Offset Right"                         value="0.0"     min="PackageWidth-(0.5*PackageWidth+PackageOffsX+0.5*DieWidth)"     max="PackageWidth-(0.5*PackageWidth+PackageOffsX+0.5*DieWidth)"     units="um"      type="Calculations"     description="Empty package space to the right of the die"                                   record="false"                                  />
+        <AParam id="PackageLeft"    name="Package Offset Left"                          value="0.0"     min="0.5*PackageWidth+PackageOffsX-0.5*DieWidth"                    max="0.5*PackageWidth+PackageOffsX-0.5*DieWidth"                    units="um"      type="Calculations"     description="Empty package space to the left of the die"                                    record="false"                                  />
+        <AParam id="RamanToUGW"     name="Raman to Edge of Active Area"                 value="0.0"     min="0.5*(UGW-RamanWidth)"                                          max="0.5*(UGW-RamanWidth)"                                          units="um"      type="Calculations"     description="Distance between width edge of ohmics and Raman region"                        record="false"                                  />
+        <AParam id="RamanToDrain"   name="Raman to Drain Ohmic"                         value="0.0"     min="OhmicGap-G2S-GL-SFP-RamanLength"                               max="OhmicGap-G2S-GL-SFP-RamanLength"                               units="um"      type="Calculations"     description="Distance between edge of Raman region to drain ohmic"                          record="false"                                  />
+        <AParam id="SFP3b"          name="Source field plate length 3b"                 value="0.0"     min="SFP3-SFP3a"                                                    max="SFP3-SFP3a"                                                    units="um"      type="Calculations"     description="Length of final lowered portion of SFP that doesn't overlap heat source"       record="false"                                  />
+        <AParam id="SFP3a"          name="Source field plate length 3a"                 value="0.0"     min="(SFP-GFPD-ThSiNB)-(SFP-GFPD-HL)"                               max="(SFP-GFPD-ThSiNB)-(SFP-GFPD-HL)"                               units="um"      type="Calculations"     description="Length of final lowered portion of SFP that overlaps heat source"              record="false"                                  />
+        <AParam id="SFP3"           name="Source field plate length 3"                  value="0.0"     min="SFP-GFPD-ThSiNB"                                               max="SFP-GFPD-ThSiNB"                                               units="um"      type="Calculations"     description="Total length of final lowered portion of SFP on SiNB"                          record="false"                                  />
+        <AParam id="SFP2"           name="Source field plate length 2"                  value="0.0"     min="GFPS+GL+GFPD+2*ThSiNB"                                         max="GFPS+GL+GFPD+2*ThSiNB"                                         units="um"      type="Calculations"     description="Length of raised portion of SFP"                                               record="false"                                  />
+        <AParam id="SFP1"           name="Source field plate length 1"                  value="0.0"     min="G2S-GFPS-ThSiNB"                                               max="G2S-GFPS-ThSiNB"                                               units="um"      type="Calculations"     description="Length of SFP extending from ohmic on SiNB"                                    record="false"                                  />
+        <AParam id="DrainLength"    name="Drain Ohmic Length"                           value="0.0"     min="G2GD-OhmicGap"                                                 max="G2GD-OhmicGap"                                                 units="um"      type="Calculations"     description="Length of drain ohmic"                                                         record="false"                                  />
+        <AParam id="SourceLength"   name="Source Ohmic Length"                          value="0.0"     min="G2GS-OhmicGap"                                                 max="G2GS-OhmicGap"                                                 units="um"      type="Calculations"     description="Length of source ohmic"                                                        record="false"                                  />
+        <AParam id="OhmicGap"       name="Ohmic Gap"                                    value="0.0"     min="G2S+GL+G2D"                                                    max="G2S+GL+G2D"                                                    units="um"      type="Calculations"     description="Distance between source and drain ohmics"                                      record="false"                                  />
+        <AParam id="PoffPerFinger"  name="Power per finger (Off)"                       value="0.0"     min="Poff*Periphery/NGF"                                            max="Poff*Periphery/NGF"                                            units="W"       type="Calculations"     description="Power dissipated in each individual finger of device during off state"         record="false"                                  />
+        <AParam id="PonPerFinger"   name="Power per finger (On)"                        value="0.0"     min="Pon*Periphery/NGF"                                             max="Pon*Periphery/NGF"                                             units="W"       type="Calculations"     description="Power dissipated in each individual finger of device during on state"          record="false"                                  />
+        <AParam id="HeaterArea"     name="Single Heat Source Area"                      value="0.0"     min="UGW*HL"                                                        max="UGW*HL"                                                        units="um^2"    type="Calculations"     description="Area of a single heat source"                                                  record="false"                                  />
+        <AParam id="Periphery"      name="Device Periphery"                             value="0.0"     min="(UGW*NGF)*0.001"                                               max="(UGW*NGF)*0.001"                                               units="mm"      type="Calculations"     description="Total device periphery"                                                        record="false"                                  />
+        <AParam id="ActiveWidth"    name="Active Width Dimension"                       value="0.0"     min="UGW"                                                           max="UGW"                                                           units="um"      type="Calculations"     description="Total width of active area (including ohmics)"                                 record="false"                                  />
+        <AParam id="ActiveLength"   name="Active Length Dimension"                      value="0.0"     min="NumPairs*LengthPairs+SourceLength"                             max="NumPairs*LengthPairs+SourceLength"                             units="um"      type="Calculations"     description="Total length of active area (including ohmics)"                                record="false"                                  />
+        <AParam id="LengthPairs"    name="Length of Unit Pair"                          value="0.0"     min="SourceLength+DrainLength+2*OhmicGap"                           max="SourceLength+DrainLength+2*OhmicGap"                           units="um"      type="Calculations"     description="Length of a single unit pair (half of each ohmic + ohmic gap)"                 record="false"                                  />
+        <AParam id="NumPairs"       name="Number of Finger Pairs"                       value="0.0"     min="0.5*NGF"                                                       max="0.5*NGF"                                                       units=""        type="Calculations"     description="Pairs of gate fingers in complete device"                                      record="false"                                  />
+    </Parameters>
+    <Points>
+        <!-- X Points -->
+        <RefX delta="PackageLeft"                               bias="1/NBX"                                                    endMeshNext="true"  />
+        <RefX delta="DieLeft"                                   bias="1/NBX"                                                    endMeshNext="true"  />
+        <RefX delta="0.25*UGW"                                  bias="NBX"      beginMeshSize="XMS"                                                 />
+        <RefX delta="RamanToUGW-0.25*UGW"                       bias="1/NBX"                                                    endMeshNext="true"  />
+        <RefX delta="RamanWidth"            refn="NRamanWidth"                                                                                      />
+        <RefX delta="RamanToUGW-0.25*UGW"                       bias="NBX"                              beginMeshPrev="true"                        />
+        <RefX delta="0.25*UGW"                                  bias="1/NBX"    endMeshSize="XMS"                                                   />
+        <RefX delta="DieRight"                                  bias="NBX"                              beginMeshPrev="true"                        />
+        <RefX delta="PackageRight"                              bias="NBX"                              beginMeshPrev="true"                        />
+        <!-- Y Points -->
+        <RefY delta="PackageBot"                                bias="1/NBY"                                                    endMeshNext="true"  />
+        <RefY delta="DieBot"                                    bias="1/NBY"                                                    endMeshNext="true"  />
+        <RefY delta="0.5*SourceLength"                          bias="1/NBY"                                                    endMeshNext="true"  />
+        <RefY delta="SFP1"                                      bias="1/NBY"                                                    endMeshNext="true"  />
+        <RefY delta="ThSiNB"                                    bias="1/NBY"                                                    endMeshNext="true"  />
+        <RefY delta="GFPS"                                      bias="1/NBY"                                                    endMeshNext="true"  />
+        <RefY delta="GL"                                        bias="1/NBY"                                                    endMeshNext="true"  />
+        <RefY delta="GFPD"                                      bias="1/NBY"                                                    endMeshNext="true"  />
+        <RefY delta="ThSiNB"                refn="NHL"                                                                          endMeshNext="true"  />
+        <RefY delta="SFP3a"                                                                                                                         />
+        <RefY delta="SFP3b"                                     bias="NBY"                              beginMeshPrev="true"                        />
+        <RefY delta="RamanLength"           refn="NRamanLength"                                                                                     />
+        <RefY delta="RamanToDrain"                              bias="NBY"                              beginMeshPrev="true"                        />
+        <RefY delta="0.5*DrainLength"                           bias="NBY"                              beginMeshPrev="true"                        />
+        <RefY delta="DieTop"                                    bias="NBY"                              beginMeshPrev="true"                        />
+        <RefY delta="PackageTop"                                bias="NBY"                              beginMeshPrev="true"                        />
+    </Points>
+    <ZLayers>
+        <!--
+        <Layer id="Heatsink"        begin=  "0"
+                                    end=    "ThHeatsink" bias="1/NBZ" endMeshNext="true" belongsToMMIC="true" equalizeOverMMIC="true"/>
+        <Layer id="ThermalPaste"    begin=  "ThHeatsink"
+                                    end=    "ThHeatsink + ThThermalPaste" bias="1/NBZ"    endMeshNext="true"/>
+        -->
+        <Layer id="PackageBot"      begin=  "ThHeatsink + ThThermalPaste"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot" bias="1/NBZ" endMeshNext="true"/>
+        <Layer id="PackageMid"      begin=  "ThHeatsink + ThThermalPaste + ThPackageBot"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid" bias="1/NBZ" endMeshNext="true"/>
+        <Layer id="PackageTop"      begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop" bias="1/NBZ" endMeshNext="true"/>
+        <Layer id="Attach"          begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach" bias="1/NBZ" endMeshNext="true"/>
+        <Layer id="BackMetal"       begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal" bias="1/NBZ" endMeshNext="true"/>
+        <Layer id="Si"              begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi" bias="1/NBZ" endMeshNext="true"/>
+        <Layer id="AlN"             begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN" bias="1/NBZ" endMeshNext="true"/>
+        <Layer id="TL"              begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL" bias="1/NBZ" endMeshNext="true"/>
+        <Layer id="GaN"             begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN" bias="1/NBZ" endMeshNext="true"/>
+        <Layer id="AlGaN"           begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN"/>
+        <Layer id="SiNA"            begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThSiNA" bias="NBZ" beginMeshPrev="true"/>
+        <Layer id="SiNBa"           begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThSiNA"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThOhmic" bias="NBZ" beginMeshPrev="true"/>
+        <Layer id="SiNBb"           begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThOhmic"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThSiNA + ThSiNB" bias="NBZ" beginMeshPrev="true"/>
+        <Layer id="SiNBc"           begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThSiNA + ThSiNB"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThSiNA + ThGateCap" bias="NBZ" beginMeshPrev="true"/>
+        <Layer id="SiNBd"           begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThSiNA + ThGateCap"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThSiNA + ThGateCap + ThSiNB" bias="NBZ" beginMeshPrev="true"/>
+        <Layer id="SiNCa"           begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThSiNA + ThGateCap + ThSiNB"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThOhmic + ThMet1" bias="NBZ" beginMeshPrev="true"/>
+        <Layer id="SiNCb"           begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThOhmic + ThMet1"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThSiNA + ThSiNB + ThMet1" bias="NBZ" beginMeshPrev="true"/>
+        <Layer id="SiNCc"           begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThSiNA + ThSiNB + ThMet1"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThSiNA + ThGateCap + ThSiNB + ThMet1" bias="NBZ" beginMeshPrev="true"/>
+        <Layer id="SiNCd"           begin=  "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThSiNA + ThGateCap + ThSiNB + ThMet1"
+                                    end=    "ThHeatsink + ThThermalPaste + ThPackageBot + ThPackageMid + ThPackageTop + ThAttach + ThBackMetal + ThSi + ThAlN + ThTL + ThGaN + ThAlGaN + ThSiNTotal" bias="NBZ" beginMeshPrev="true"/>
+    </ZLayers>
+    <Materials>
+        <AMaterial id="AlGaN" description="Aluminum (40%) Gallium (60%) Nitride" color="128 0 0" conductivity="2.5e-005 300,
+                    2e-005 350,
+                    1.6e-005 400,
+                    1.4e-005 450,
+                    1.2e-005 500" capacity="0.000594 300" density="4.952e-009 300"/>
+        <AMaterial id="AlGaN_Al40GaN60" description="" color="68 45 83" conductivity="7.5e-006 300"/>
+        <AMaterial id="AlN_Thin" description="" color="250 80 250" conductivity="1.6e-005 300"/>
+        <AMaterial id="AuSn_Solder" description="" color="201 203 182" conductivity="5.7e-005 300"/>
+        <AMaterial id="Cu_NIST" description="" color="255 128 0" conductivity="0.00287 1,
+                    0.00573 2,
+                    0.00855 3,
+                    0.0113 4,
+                    0.0138 5,
+                    0.0159 6,
+                    0.0177 7,
+                    0.0189 8,
+                    0.0195 9,
+                    0.0196 10,
+                    0.0193 11,
+                    0.0185 12,
+                    0.0176 13,
+                    0.0166 14,
+                    0.0156 15,
+                    0.0145 16,
+                    0.0124 18,
+                    0.0105 20,
+                    0.0068 25,
+                    0.0043 30,
+                    0.0029 35,
+                    0.00205 40,
+                    0.00153 45,
+                    0.00122 50,
+                    0.00085 60,
+                    0.00067 70,
+                    0.00057 80,
+                    0.000514 90,
+                    0.000483 100,
+                    0.000428 150,
+                    0.000413 200,
+                    0.000404 250,
+                    0.000401 273,
+                    0.000398 300,
+                    0.000394 350,
+                    0.000392 400,
+                    0.000388 500,
+                    0.000383 600,
+                    0.000377 700,
+                    0.000371 800,
+                    0.000364 900,
+                    0.000357 1000,
+                    0.00035 1100,
+                    0.000342 1200,
+                    0.000334 1300"/>
+        <AMaterial id="Mo_NIST" description="" color="192 128 64" conductivity="0.0000152 1,
+                    0.0000304 2,
+                    0.0000456 3,
+                    0.0000608 4,
+                    0.000076 5,
+                    0.0000911 6,
+                    0.000106 7,
+                    0.000121 8,
+                    0.000136 9,
+                    0.000151 10,
+                    0.000166 11,
+                    0.000181 12,
+                    0.000195 13,
+                    0.000209 14,
+                    0.000223 15,
+                    0.000237 16,
+                    0.000263 18,
+                    0.000287 20,
+                    0.000336 25,
+                    0.000364 30,
+                    0.00037 35,
+                    0.000355 40,
+                    0.000328 45,
+                    0.000302 50,
+                    0.000262 60,
+                    0.000232 70,
+                    0.000209 80,
+                    0.000193 90,
+                    0.000179 100,
+                    0.00016 123.2,
+                    0.000149 150,
+                    0.000145 173.2,
+                    0.000143 200,
+                    0.000142 223.2,
+                    0.00014 250,
+                    0.000139 273.2,
+                    0.000138 298.2,
+                    0.000138 300,
+                    0.000138 323.2,
+                    0.000136 350,
+                    0.000135 373.2,
+                    0.000134 400,
+                    0.000132 473.2,
+                    0.00013 500,
+                    0.000127 573.2,
+                    0.000126 600,
+                    0.000123 673.2,
+                    0.000122 700,
+                    0.000118 800,
+                    0.000116 873.2,
+                    0.000115 900,
+                    0.000113 973.2,
+                    0.000112 1000,
+                    0.000109 1073.2,
+                    0.000108 1100,
+                    0.000106 1173.2,
+                    0.000105 1200,
+                    0.000103 1273.2,
+                    0.000103 1300"/>
+        <AMaterial id="Mo70Cu30" description="" color="128 64 0" conductivity="2.17E-05 1,
+                    4.33E-05 2,
+                    6.50E-05 3,
+                    8.67E-05 4,
+                    0.000108316 5,
+                    0.000129824 6,
+                    0.000151041 7,
+                    0.000172384 8,
+                    0.000193707 9,
+                    0.000215004 10,
+                    0.000236272 11,
+                    0.000257492 12,
+                    0.000277255 13,
+                    0.000296969 14,
+                    0.000316632 15,
+                    0.000336216 16,
+                    0.00037233 18,
+                    0.000405253 20,
+                    0.000470046 25,
+                    0.000501795 30,
+                    0.000501168 35,
+                    0.000472105 40,
+                    0.000429143 45,
+                    0.000390049 50,
+                    0.000330612 60,
+                    0.0002886 70,
+                    0.000258025 80,
+                    0.000237496 90,
+                    0.000220666 100,
+                    0.000185222 150,
+                    0.000177889 200,
+                    0.000174138 250,
+                    0.000172888 273.2,
+                    0.000171638 300,
+                    0.000169248 350,
+                    0.000166968 400,
+                    0.000162395 500,
+                    0.000157757 600,
+                    0.000153058 700,
+                    0.00014835 800,
+                    0.000144694 900,
+                    0.000141037 1000,
+                    0.000136265 1100,
+                    0.000132558 1200,
+                    0.000129966 1300"/>
+        <AMaterial id="GaN_NLN" description="" color="193 74 2" conductivity="0.00269944 1,
+                    0.00192207 2,
+                    0.00157574 3,
+                    0.00136856 4,
+                    0.00122681 5,
+                    0.00112196 6,
+                    0.00104034 7,
+                    0.000974449 8,
+                    0.000919802 9,
+                    0.000873521 10,
+                    0.000833664 11,
+                    0.000798867 12,
+                    0.000768141 13,
+                    0.000740748 14,
+                    0.000716125 15,
+                    0.000693832 16,
+                    0.000654922 18,
+                    0.000621969 20,
+                    0.000557549 25,
+                    0.000509899 30,
+                    0.000472803 35,
+                    0.000442857 40,
+                    0.000418022 45,
+                    0.000396989 50,
+                    0.000363061 60,
+                    0.000336647 70,
+                    0.000315326 80,
+                    0.000297642 90,
+                    0.000282666 100,
+                    0.000255196 123.2,
+                    0.000231733 150,
+                    0.000215966 173.2,
+                    0.000201265 200,
+                    0.000190727 223.2,
+                    0.000180419 250,
+                    0.000172742 273.2,
+                    0.000165487 298.2,
+                    0.000165 300,
+                    0.000159086 323.2,
+                    0.000152996 350,
+                    0.000148259 373.2,
+                    0.000143306 400,
+                    0.000131978 473.2,
+                    0.000128463 500,
+                    0.000120144 573.2,
+                    0.000117484 600,
+                    0.000111041 673.2,
+                    0.000108937 700,
+                    0.000103755 773.2,
+                    0.000102037 800,
+                    9.78e-005 873.2,
+                    9.63e-005 900,
+                    9.27e-005 973.2,
+                    9.15e-005 1000,
+                    8.84e-005 1073.2,
+                    8.73e-005 1100,
+                    8.46e-005 1173.2,
+                    8.37e-005 1200,
+                    8.13e-005 1273.2,
+                    8.04e-005 1300,
+                    7.83e-005 1373.2,
+                    7.76e-005 1400,
+                    7.57e-005 1473.2,
+                    7.5e-005 1500,
+                    7.33e-005 1573.2,
+                    7.27e-005 1600,
+                    7.11e-005 1673.2,
+                    7.08e-005 1685"/>
+        <AMaterial id="Au" description="" color="255 255 0" conductivity="0.00031 300"/>
+        <AMaterial id="Si_NIST" description="" color="0 128 192" conductivity="6.93e-006 1,
+                    4.54e-005 2,
+                    0.000138 3,
+                    0.000297 4,
+                    0.000527 5,
+                    0.000823 6,
+                    0.00117 7,
+                    0.00155 8,
+                    0.00195 9,
+                    0.00233 10,
+                    0.0027 11,
+                    0.00309 12,
+                    0.00348 13,
+                    0.00384 14,
+                    0.00416 15,
+                    0.00441 16,
+                    0.00477 18,
+                    0.00498 20,
+                    0.00513 25,
+                    0.00481 30,
+                    0.00413 35,
+                    0.00353 40,
+                    0.00306 45,
+                    0.00268 50,
+                    0.00211 60,
+                    0.00168 70,
+                    0.00134 80,
+                    0.00108 90,
+                    0.000884 100,
+                    0.000599 123.2,
+                    0.000409 150,
+                    0.00033 173.2,
+                    0.000264 200,
+                    0.000225 223.2,
+                    0.000191 250,
+                    0.000168 273.2,
+                    0.000149 298.2,
+                    0.000148 300,
+                    0.000133 323.2,
+                    0.000119 350,
+                    0.000108 373.2,
+                    9.89e-005 400,
+                    8.14e-005 473.2,
+                    7.62e-005 500,
+                    6.51e-005 573.2,
+                    6.19e-005 600,
+                    5.36e-005 673.2,
+                    5.08e-005 700,
+                    4.42e-005 773.2,
+                    4.22e-005 800,
+                    3.74e-005 873.2,
+                    3.59e-005 900,
+                    3.23e-005 973.2,
+                    3.12e-005 1000,
+                    2.86e-005 1073.2,
+                    2.79e-005 1100,
+                    2.62e-005 1173.2,
+                    2.57e-005 1200,
+                    2.47e-005 1273.2,
+                    2.44e-005 1300,
+                    2.37e-005 1373.2,
+                    2.35e-005 1400,
+                    2.29e-005 1473.2,
+                    2.27e-005 1500,
+                    2.23e-005 1573.2,
+                    2.21e-005 1600,
+                    2.2e-005 1673.2,
+                    2.2e-005 1685"/>
+        <AMaterial id="SiN" description="" color="192 192 192" conductivity="1.3e-005 300"/>
+        <AMaterial id="Thermal_Paste" description="" color="255 255 255" conductivity="2e-006 300"/>
+    </Materials>
+    <Device>
+        <!-- Heatsink -->
+        <!-- <Component name="Heatsink" material="Cu_NIST" layer="Heatsink" belongsToMMIC="true" equalizeOverMMIC="true">
+            <Blocks x="1-7" y="1-16"/>
+        </Component> -->
+        
+        <!-- Package -->
+        <!-- <Component name="ThermalPaste" material="Thermal_Paste" layer="ThermalPaste">
+            <Blocks x="1-7" y="1-16"/>
+        </Component> -->
+        <Component name="PackageBot" material="Cu_NIST" layer="PackageBot">
+            <Blocks x="1-9" y="1-16"/>
+        </Component>
+        <Component name="PackageMid" material="Mo_NIST" layer="PackageMid">
+            <Blocks x="1-9" y="1-16"/>
+        </Component>
+        <Component name="PackageTop" material="Cu_NIST" layer="PackageTop">
+            <Blocks x="1-9" y="1-16"/>
+        </Component>
+        
+        <!-- Bottom of Die -->
+        <Component name="DieAttach" material="AuSn_Solder" layer="Attach">
+            <Blocks x="2-8" y="2-15"/>
+        </Component>
+        <Component name="BackMetal" material="Au" layer="BackMetal">
+            <Blocks x="2-8" y="2-15"/>
+        </Component>
+        <Component name="Si" material="Si_NIST" layer="Si">
+            <Blocks x="2-8" y="2-15"/>
+        </Component>
+        <Component name="AlN" material="AlN_Thin" layer="AlN">
+            <Blocks x="2-8" y="2-15"/>
+        </Component>
+        <Component name="TL" material="AlGaN" layer="TL">
+            <Blocks x="2-8" y="2-15"/>
+        </Component>
+
+        <Component name="GaN" material="GaN_NLN" layer="GaN">
+            <Blocks x="2-2" y="2-15"/>
+            <Blocks x="8-8" y="2-15"/>
+            <Blocks x="3-7" y="2-8"/>
+            <Blocks x="3-7" y="11-11"/>
+            <Blocks x="3-7" y="13-15"/>
+            <Blocks x="3-4" y="12-12"/>
+            <Blocks x="6-7" y="12-12"/>
+        </Component>
+        <!-- GaN uRaman measurement region -->
+        <Component name="GaN" material="GaN_NLN" layer="GaN">
+            <Blocks x="5-5" y="12-12"/>
+        </Component>
+        <!-- GaN under Heat Source -->
+        <Component name="GaN" material="GaN_NLN" layer="GaN">
+            <Blocks x="3-7" y="9-10"/>
+        </Component>
+
+        <Component name="AlGaN" material="AlGaN" layer="AlGaN">
+            <Blocks x="2-2" y="2-15"/>
+            <Blocks x="8-8" y="2-15"/>
+            <Blocks x="3-7" y="2-8"/>
+            <Blocks x="3-7" y="11-15"/>
+            <Blocks x="3-3" y="9-10"/>
+            <Blocks x="7-7" y="9-10"/>
+        </Component>
+        <!-- AlGaN above Heat Source -->
+        <Component name="2DEG" material="AlGaN" layer="AlGaN">
+            <Blocks x="4-6" y="9-10"/>
+        </Component>
+        
+        <!-- Ohmics -->
+        <Component name="Ohmic" material="Au" layer="SiNA">
+            <Blocks x="3-7" y="3-3"/>
+            <Blocks x="3-7" y="14-14"/>
+        </Component>
+        <Component name="Ohmic" material="Au" layer="SiNBa">
+            <Blocks x="3-7" y="3-3"/>
+            <Blocks x="3-7" y="14-14"/>
+        </Component>
+        
+        <!-- Gate Stem -->
+        <Component name="GateCenter" material="Au" layer="SiNA">
+            <Blocks x="4-6" y="7-7"/>
+        </Component>
+        <Component name="Gate" material="Au" layer="SiNA">
+            <Blocks x="3-3" y="7-7"/>
+            <Blocks x="7-7" y="7-7"/>
+        </Component>
+        
+        <!-- Gate Cap -->
+        <Component name="GateCenter" material="Au" layer="SiNBa">
+            <Blocks x="4-6" y="6-8"/>
+        </Component>
+        <Component name="GateCenter" material="Au" layer="SiNBb">
+            <Blocks x="4-6" y="6-8"/>
+        </Component>
+        <Component name="GateCenter" material="Au" layer="SiNBc">
+            <Blocks x="4-6" y="6-8"/>
+        </Component>
+        <Component name="Gate" material="Au" layer="SiNBa">
+            <Blocks x="3-3" y="6-8"/>
+            <Blocks x="7-7" y="6-8"/>
+        </Component>
+        <Component name="Gate" material="Au" layer="SiNBb">
+            <Blocks x="3-3" y="6-8"/>
+            <Blocks x="7-7" y="6-8"/>
+        </Component>
+        <Component name="Gate" material="Au" layer="SiNBc">
+            <Blocks x="3-3" y="6-8"/>
+            <Blocks x="7-7" y="6-8"/>
+        </Component>
+        
+        <!-- Met1 over Ohmics -->
+        <Component name="Met1" material="Au" layer="SiNBb">
+            <Blocks x="3-7" y="3-3"/>
+            <Blocks x="3-7" y="14-14"/>
+        </Component>
+        <Component name="Met1" material="Au" layer="SiNBc">
+            <Blocks x="3-7" y="3-3"/>
+            <Blocks x="3-7" y="14-14"/>
+        </Component>
+        <Component name="Met1" material="Au" layer="SiNBd">
+            <Blocks x="3-7" y="3-3"/>
+            <Blocks x="3-7" y="14-14"/>
+        </Component>
+        <Component name="Met1" material="Au" layer="SiNCa">
+            <Blocks x="3-7" y="3-3"/>
+            <Blocks x="3-7" y="14-14"/>
+        </Component>
+        
+        <!-- Lower Field Plate -->
+        <Component name="Met1" material="Au" layer="SiNBc">
+            <Blocks x="3-7" y="4-4"/>
+            <Blocks x="3-7" y="10-11"/>
+        </Component>
+        <Component name="Met1" material="Au" layer="SiNBd">
+            <Blocks x="3-7" y="4-4"/>
+            <Blocks x="3-7" y="10-11"/>
+        </Component>
+        <Component name="Met1" material="Au" layer="SiNCa">
+            <Blocks x="3-7" y="4-4"/>
+            <Blocks x="3-7" y="10-11"/>
+        </Component>
+        <Component name="Met1" material="Au" layer="SiNCb">
+            <Blocks x="3-7" y="4-4"/>
+            <Blocks x="3-7" y="10-11"/>
+        </Component>
+        
+        <!-- Upper Field Plate -->
+        <Component name="Met1" material="Au" layer="SiNCa">
+            <Blocks x="3-7" y="5-9"/>
+        </Component>
+        <Component name="Met1" material="Au" layer="SiNCb">
+            <Blocks x="3-7" y="5-9"/>
+        </Component>
+        <Component name="Met1" material="Au" layer="SiNCc">
+            <Blocks x="3-7" y="5-9"/>
+        </Component>
+        
+        <!-- SiNA -->
+        <Component name="SiN" material="SiN" layer="SiNA">
+            <Blocks x="2-2" y="2-15"/>
+            <Blocks x="8-8" y="2-15"/>
+            <Blocks x="3-7" y="2-2"/>
+            <Blocks x="3-7" y="15-15"/>
+            <Blocks x="3-7" y="4-6"/>
+            <Blocks x="3-7" y="8-13"/>
+        </Component>
+        
+        <!-- SiNB up to Ohmic height-->
+        <Component name="SiN" material="SiN" layer="SiNBa">
+            <Blocks x="2-2" y="2-15"/>
+            <Blocks x="8-8" y="2-15"/>
+            <Blocks x="3-7" y="2-2"/>
+            <Blocks x="3-7" y="15-15"/>
+            <Blocks x="3-7" y="4-5"/>
+            <Blocks x="3-7" y="9-13"/>
+        </Component>
+        
+        <!-- SiNB up to total SiNB thickness-->
+        <Component name="SiN" material="SiN" layer="SiNBb">
+            <Blocks x="2-2" y="2-15"/>
+            <Blocks x="8-8" y="2-15"/>
+            <Blocks x="3-7" y="2-2"/>
+            <Blocks x="3-7" y="15-15"/>
+            <Blocks x="3-7" y="4-5"/>
+            <Blocks x="3-7" y="9-13"/>
+        </Component>
+        
+        <!-- SiNB up to Gate Cap height-->
+        <Component name="SiN" material="SiN" layer="SiNBc">
+            <Blocks x="2-2" y="2-15"/>
+            <Blocks x="8-8" y="2-15"/>
+            <Blocks x="3-7" y="2-2"/>
+            <Blocks x="3-7" y="15-15"/>
+            <Blocks x="3-7" y="5-5"/>
+            <Blocks x="3-7" y="9-9"/>
+            <Blocks x="3-7" y="12-13"/>
+        </Component>
+        
+        <!-- SiNB up between Gate Cap and SFP -->
+        <Component name="SiN" material="SiN" layer="SiNBd">
+            <Blocks x="2-2" y="2-15"/>
+            <Blocks x="8-8" y="2-15"/>
+            <Blocks x="3-7" y="2-2"/>
+            <Blocks x="3-7" y="15-15"/>
+            <Blocks x="3-7" y="5-9"/>
+            <Blocks x="3-7" y="12-13"/>
+        </Component>
+        
+        <!-- SiNC up to top of Met1 over Ohmics -->
+        <Component name="SiN" material="SiN" layer="SiNCa">
+            <Blocks x="2-2" y="2-15"/>
+            <Blocks x="8-8" y="2-15"/>
+            <Blocks x="3-7" y="2-2"/>
+            <Blocks x="3-7" y="15-15"/>
+            <Blocks x="3-7" y="12-13"/>
+        </Component>
+        
+        <!-- SiNC up to top of lower SFP -->
+        <Component name="SiN" material="SiN" layer="SiNCb">
+            <Blocks x="2-2" y="2-15"/>
+            <Blocks x="8-8" y="2-15"/>
+            <Blocks x="3-7" y="2-3"/>
+            <Blocks x="3-7" y="12-15"/>
+        </Component>
+        
+        <!-- SiNC up to top of upper SFP -->
+        <Component name="SiN" material="SiN" layer="SiNCc">
+            <Blocks x="2-2" y="2-15"/>
+            <Blocks x="8-8" y="2-15"/>
+            <Blocks x="3-7" y="2-4"/>
+            <Blocks x="3-7" y="10-15"/>
+        </Component>
+        
+        <!-- SiNC up to top of total SiN thickness -->
+        <Component name="SiN" material="SiN" layer="SiNCd">
+            <Blocks x="2-8" y="2-15"/>
+        </Component>
+    </Device>
+    <BoundaryConditions>
+        <Constant temperature="TBase+273.15" face="bottom" layer="PackageBot" belongsToMMIC="true" extractable="true">
+            <Blocks x="1-9" y="1-16"/>
+        </Constant>
+        <SFlux flux="0.0" face="top" layer="GaN" usersub="true">
+            <Blocks x="3-7" y="9-10"/>
+            <File filename=".usr">
+                <Line valueOf="PonPerFinger/HeaterArea" />  <!-- Flux for ON interval [W/um^2]  -->
+                <Line valueOf="PW*1e-6" />                  <!-- Duration of ON interval [s]    -->
+                <Line valueOf="PoffPerFinger/HeaterArea" /> <!-- Flux for OFF interval [W/um^2] -->
+                <Line valueOf="(PW*(100/DC-1))*1e-6" />     <!-- Duration of OFF interval [s]   -->
+                <Line valueOf="0.0" />                      <!-- Cycle Time Start Offset [s]    -->
+            </File>
+        </SFlux>
+    </BoundaryConditions>
+    <Simulation>
+        <Time allowUnsteady="true" steady="true" final="0.003" saveEvery="1e-006" step="1e-006">
+ </Time>
+        <Impedance calculate="false" outputBAS="true" outputNET="true" outputCIR="false" useVCVS2="true" minRvalue="0.001"/>
+        <Temperature initial="300" useBCfile="false" restartFromFile="false" filetime="0"/>
+        <Record recordAll="true" recordAverageTemps="true"  />
+        <Solver relTolerance="0.0001" absTolerance="1e-012" timeStepAlpha="1" stefan-boltzmann="5.67e-020"/>
+    </Simulation>
+</Template>

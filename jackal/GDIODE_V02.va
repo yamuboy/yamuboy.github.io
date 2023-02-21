@@ -1,0 +1,64 @@
+/*
+      Gate diode model for the Jackal FET
+      Version 0.1
+*/
+
+`include "disciplines.h"
+`include "constants.h"
+
+`define   GMIN      1.0e-12
+`define   SQRTPI    1.7724538509055160273
+
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+module GDIODE_V02 ( va, vc, Td );
+    inout           va, vc, Td  ;
+    electrical      va, vc      ;
+    thermal                 Td  ;
+
+    (* desc = "scaling factor", units = "" *)
+    parameter real SF = 1.0 from (0:inf);
+    
+    (* desc = "diode saturation current factor", units = "" *)
+    parameter real IS_FACT = -15.28191 from (-inf:inf);
+    
+    (* desc = "diode exponential factor", units = "" *)
+    parameter real EXP_FACT = 27.175 from (-inf:inf);
+    
+    (* desc = "Nominal (extraction) temperature for temperature scale factors", units = "" *)
+    parameter real TNOM = 25.0 from [-273.15:1000.0];
+            
+    (* desc = "temperature factor for the diode saturation current", units = "" *)
+    parameter real T_IS = 0.0326 from (-inf:inf);
+    
+    (* desc = "temperature factor for the diode exponetial", units = "" *)
+    parameter real T_EXP = -0.041 from (-inf:inf);
+    
+    /*****************************************************************************/
+    /*****************************************************************************/
+
+    analog begin : main
+    
+        real tfact, arg;
+        real Vdiode, Is;
+
+        Vdiode = V(va,vc);
+        tfact = Temp(Td) - TNOM;
+        
+        Is = 0.5*pow(10.0,(T_IS*tfact+IS_FACT))*SF;
+        arg = T_EXP*tfact + EXP_FACT;
+                
+        I(va,vc)  <+ Is*(limexp(arg*Vdiode) - 1.0);
+        Pwr(Td)   <+ `GMIN*Temp(Td);
+
+    end
+    
+endmodule
+
+
+
+
+
+
+

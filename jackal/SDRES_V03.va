@@ -1,0 +1,92 @@
+/*
+      Source/Drain resistor model for the Jackal FET
+      Version 0.1
+*/
+
+`include "disciplines.h"
+`include "constants.h"
+
+`define   GMIN      1.0e-12
+
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+module SDRES_V03 ( vi, vo, Tr );
+    inout          vi, vo, Tr  ;
+    electrical     vi, vo      ;
+    thermal                Tr  ;
+
+    (* desc = "resistor periphery", units = "" *)
+    parameter real WID = 1.0 from [0.001:inf);
+    
+    (* desc = "resistor length", units = "" *)
+    parameter real LEN = 1.0 from [0.001:inf);
+
+    (* desc = "sheet resistivity min", units = "" *)
+    parameter real SRHO_MIN = 107.94 from [0:inf);
+    
+    (* desc = "sheet resistivity temperature slope", units = "" *)
+    parameter real SRHO_SLOPE = 5.6674 from [0:inf);
+    
+    (* desc = "sheet resistivity temperature offset", units = "" *)
+    parameter real SRHO_TOFFSET = 15.35 from [-273.15:inf);
+    
+    (* desc = "sheet resistivity temperature smoothing factor", units = "" *)
+    parameter real SRHO_ALPHA = 96.87 from [0:inf);
+    
+    (* desc = "resistor max current", units = "" *)
+    parameter real SRHO_IMAX = 1.15 from [0:inf);
+
+    (* desc = "Temperature scale factor for srho_imax", units = "" *)
+    parameter real T_SRHO_IMAX = 0.0 from (-inf:0];
+    
+    (* desc = "contact resistance", units = "" *)
+    parameter real RCONTACT = 0.35 from [0:inf);
+    
+    (* desc = "Nominal (extraction) temperature for temperature scale factors", units = "" *)
+    parameter real TNOM = 25.0 from [-273.15:1000.0];
+
+    (* desc = "Temperature scale factor for RCONTACT", units = "" *)
+    parameter real T_RC = 0.0 from (-inf:inf);
+    
+    /*****************************************************************************/
+    /*****************************************************************************/
+
+    analog begin : main
+    
+        real rfact, rcfact, ifact;
+        real Trr, T_deg_C, tfactor, sheetr, contr, rtotal, imax, vres, ires, vint;
+
+        /////////////////////////////////////////////////////////////////////////
+        @(initial_step) begin : atstart
+            // compute constants
+            rfact = LEN / WID;        
+            rcfact = 1000.0 / WID;        
+            ifact = SRHO_IMAX * WID / 1000.0;        
+        end
+        /////////////////////////////////////////////////////////////////////////
+
+        //////////// constrain Tr between -150 and 600 deg C ////////////////////
+        
+        Trr = Temp(Tr);
+        T_deg_C = Trr - 0.5*((Trr-600.0)+sqrt((Trr-600.0)*(Trr-600.0)+2500.0)) + 0.5*((-150.0-Trr)+sqrt((-150.0-Trr)*(-150.0-Trr)+2500.0));
+
+        /////////////////////////////////////////////////////////////////////////
+
+        tfactor = T_deg_C - TNOM;
+        sheetr = SRHO_MIN + 0.5*SRHO_SLOPE*(Trr-SRHO_TOFFSET + sqrt((Trr-SRHO_TOFFSET)*(Trr-SRHO_TOFFSET)+SRHO_ALPHA*SRHO_ALPHA));
+        contr = RCONTACT + tfactor*T_RC;
+        rtotal = sheetr*rfact + contr*rcfact;
+        imax = ifact * (1.0 + T_SRHO_IMAX*tfactor);
+
+        vres = V(vi,vo);
+        ires = imax * tanh( vres / (rtotal*imax) );
+        vint = vres - ires*contr*rcfact;
+                
+        I(vi,vo)  <+ ires;
+        Pwr(Tr)   <+ `GMIN*Temp(Tr);
+//      Pwr(Tr)   <+ `GMIN*Temp(Tr) - abs(ires*vint);  //
+
+    end
+    
+endmodule
