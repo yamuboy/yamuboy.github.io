@@ -1,0 +1,18 @@
+# Layer Purpose Stream Datatype
+EMESA 	drawing   1 -1 # emesa
+BMET 	drawing   2 -1 # bmet
+BMESA 	drawing   3 -1 # bmesa
+CMESA 	drawing   5 -1 # cmesa
+CMET 	drawing   6 -1 # cmet
+TFR 	drawing   7 -1 # tfr
+VIA1 	drawing   8 -1 # via1
+MET1 	drawing   9 -1 # met1
+VIA2 	drawing  10 -1 # via2
+VIA3 	drawing  16 -1 # via3
+MET2 	drawing  11 -1 # met2
+MET22 	drawing  51 -1 # met22
+PROTECT drawing  12 -1 # prot
+BACKVIA drawing  13 -1 # bvia
+CGR		drawing  49 -1 # cgr
+
+
