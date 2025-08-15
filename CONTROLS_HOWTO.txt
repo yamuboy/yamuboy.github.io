@@ -1,0 +1,14 @@
+# How controls are used
+- Put any extra variables in data/controls.csv with columns: state,year,<your columns...>
+- The script auto-detects numeric controls that vary within state over time.
+- It runs two versions of each model:
+  1) NO controls
+  2) WITH controls (adds all detected control columns)
+- Detected controls are written to data_out/detected_controls.txt
+- Outputs:
+  - data_out/did_results_nocontrols.txt
+  - data_out/did_results_withcontrols.txt
+  - data_out/event_study_nocontrols.txt
+  - data_out/event_study_withcontrols.txt
+  - data_out/event_study_nocontrols.png
+  - data_out/event_study_withcontrols.png
